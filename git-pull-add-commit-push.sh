@@ -12,7 +12,7 @@ git pull
 echo -e "\nStaging changes of local repository $(pwd) . . .\n"
 git add .
 echo -e "\nCommitting changes . . .\n"
-git commit -m "Committ from $(hostname) on $v_date"
+git commit -m "Commit from $(hostname) on $v_date"
 echo -e "\nPushing changes to GitHub . . .\n"
 git push
 echo -e "\nPushing changes to GitLab . . .\n"
