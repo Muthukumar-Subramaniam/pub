@@ -1,0 +1,15 @@
+[BaseOS]
+name=RHEL 9.4 - BaseOS
+metadata_expire=-1
+gpgcheck=1
+enabled=1
+baseurl=http://get_web_server_name/rhel-9-4/BaseOS/
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+
+[AppStream]
+name=RHEL 9.4 - AppStream
+metadata_expire=-1
+gpgcheck=1
+enabled=1
+baseurl=http://get_web_server_name/rhel-9-4/AppStream/
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release

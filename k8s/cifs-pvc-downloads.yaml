@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cifs-pvc-downloads 
+spec:
+  accessModes:
+    - ReadOnlyMany
+  resources:
+    requests:
+      storage: 1Mi  # Minimal value to meet Kubernetes requirements
+  volumeName: cifs-pv-downloads
