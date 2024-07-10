@@ -20,13 +20,13 @@ git push origin-gitlab main
 
 echo -e "\nPublic Code Repository details :\n"
 
-echo -e "\nGitHub:"
-echo -e "\n	HTTPS : https://github.com/Muthukumar-Subramaniam/pub.git\n"
-echo -e "\n	SSH   : git@github.com:Muthukumar-Subramaniam/pub.git\n"
+echo -e "GitHub:"
+echo -e "	HTTPS : https://github.com/Muthukumar-Subramaniam/pub.git"
+echo -e "	SSH   : git@github.com:Muthukumar-Subramaniam/pub.git"
 
 echo -e "\nGitLab:"
-echo -e "\n	HTTPS : https://gitlab.com/muthukumar-gitlab/pub.git\n"
-echo -e "\n	SSH   : git@gitlab.com:muthukumar-gitlab/pub.git\n"
+echo -e "	HTTPS : https://gitlab.com/muthukumar-gitlab/pub.git"
+echo -e "	SSH   : git@gitlab.com:muthukumar-gitlab/pub.git"
 
 v_date=$(date +%d-%m-%Y_%I-%M-%p)
 echo -e "\nScript execution completed at $v_date .\n"
