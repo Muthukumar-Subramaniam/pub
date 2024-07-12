@@ -1,1 +1,1 @@
-wsl -d Debian
+wsl -d Ubuntu-24.04
