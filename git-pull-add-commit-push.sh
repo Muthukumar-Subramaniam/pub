@@ -7,6 +7,8 @@ v_date=$(date +%d-%m-%Y_%I-%M-%p)
 {
 echo -e "\nScript execution started at $v_date . . ."
 
+if ! ping -c 1 google.com &>/dev/null ;then echo "Internet is Down! Execution stopped !";exit;fi
+
 echo -e "\nPulling changes from GitHub . . .\n"
 git pull
 echo -e "\nStaging changes of local repository $(pwd) . . .\n"
