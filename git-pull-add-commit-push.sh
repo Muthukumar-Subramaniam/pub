@@ -4,10 +4,18 @@ v_date=$(date +%d-%m-%Y_%I-%M-%p)
 
 > logs-git-pull-add-commit-push.txt
 
+if ! ping -c 1 google.com &>/dev/null
+then 
+	{
+	echo -e "\nInternet is Down! Execution stopped !\n"
+	echo -e "Time of Execution : $v_date \n"
+	} &> logs-git-pull-add-commit-push.txt
+	cat logs-git-pull-add-commit-push.txt
+	exit
+fi
+
 {
 echo -e "\nScript execution started at $v_date . . ."
-
-if ! ping -c 1 google.com &>/dev/null ;then echo "Internet is Down! Execution stopped !";exit;fi
 
 echo -e "\nPulling changes from GitHub . . .\n"
 git pull
