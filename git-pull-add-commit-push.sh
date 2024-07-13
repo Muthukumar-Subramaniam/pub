@@ -2,7 +2,10 @@
 
 v_date=$(date +%d-%m-%Y_%I-%M-%p)
 
-echo -e "\nExecution of : $(pwd)/$(basename $0) "> logs-git-pull-add-commit-push.txt
+{
+echo -e "\nExecution of : $(pwd)/$(basename $0) "
+echo -e "\nFrom Host : $(hostname)"
+} > logs-git-pull-add-commit-push.txt
 
 if ! ping -c 1 github.com &>/dev/null
 then 
