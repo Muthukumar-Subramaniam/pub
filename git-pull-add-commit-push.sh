@@ -4,7 +4,7 @@ v_date=$(date +%d-%m-%Y_%I-%M-%p)
 
 > logs-git-pull-add-commit-push.txt
 
-if ! ping -c 1 google.com &>/dev/null
+if ! ping -c 1 github.com &>/dev/null
 then 
 	{
 	echo -e "\nInternet is Down! Execution stopped !\n"
