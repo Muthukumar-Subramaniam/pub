@@ -40,6 +40,6 @@ echo -e "	SSH   : git@gitlab.com:muthukumar-gitlab/pub.git"
 
 v_date=$(date +%d-%m-%Y_%I-%M-%p)
 echo -e "\nScript execution completed at $v_date .\n"
-} &> logs-git-pull-add-commit-push.txt
+} &>> logs-git-pull-add-commit-push.txt
 
 cat logs-git-pull-add-commit-push.txt
