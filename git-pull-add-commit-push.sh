@@ -1,9 +1,9 @@
 #!/bin/bash
 
-v_date=$(date +%d-%m-%Y_%I-%M-%p)
+v_date=$(date +%I:%M" "%p" "%Z" "%d-%m-%Y)
 
 {
-echo -e "\nExecution of : $(pwd)/$(basename $0) "
+echo -e "\nExecution of : $(pwd)/$(basename $0)"
 echo -e "\nFrom Host : $(hostname)"
 } > logs-git-pull-add-commit-push.txt
 
@@ -18,7 +18,7 @@ then
 fi
 
 {
-echo -e "\nScript execution started at $v_date . . ."
+echo -e "\nScript execution started at : $v_date . . ."
 
 echo -e "\nPulling changes from GitHub . . .\n"
 git pull
@@ -41,8 +41,8 @@ echo -e "\nGitLab:"
 echo -e "	HTTPS : https://gitlab.com/muthukumar-gitlab/pub.git"
 echo -e "	SSH   : git@gitlab.com:muthukumar-gitlab/pub.git"
 
-v_date=$(date +%d-%m-%Y_%I-%M-%p)
-echo -e "\nScript execution completed at $v_date .\n"
+v_date=$(date +%I:%M" "%p" "%Z" "%d-%m-%Y)
+echo -e "\nScript execution completed at : $v_date .\n"
 } &>> logs-git-pull-add-commit-push.txt
 
 cat logs-git-pull-add-commit-push.txt
