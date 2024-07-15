@@ -18,7 +18,7 @@ then
 fi
 
 {
-echo -e "\nScript execution started at : $v_date . . ."
+echo -e "\nScript execution started at : $(date) . . ."
 
 echo -e "\nPulling changes from GitHub . . .\n"
 git pull
@@ -42,7 +42,7 @@ echo -e "	HTTPS : https://gitlab.com/muthukumar-gitlab/pub.git"
 echo -e "	SSH   : git@gitlab.com:muthukumar-gitlab/pub.git"
 
 v_date=$(date +%I:%M" "%p" "%Z" "%d-%m-%Y)
-echo -e "\nScript execution completed at : $v_date .\n"
+echo -e "\nScript execution completed at : $(date) .\n"
 } &>> logs-git-pull-add-commit-push.txt
 
 cat logs-git-pull-add-commit-push.txt
