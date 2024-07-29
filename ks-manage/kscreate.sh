@@ -11,7 +11,8 @@ do
 	echo -e "\nPlease use only letters, numbers, and hyphens.\n (Please do not start with a number)."
 	echo -e "No need to append the domain name muthuks.local.lab\n"
 
-	read -p "Please Enter the Hostname for which Kickstarts are required : " v_get_hostname
+	# shellcheck disable=SC2162
+	read -r -p "Please Enter the Hostname for which Kickstarts are required : " v_get_hostname
 
 	if [[ $v_get_hostname =~ ^[[:alpha:]]([-[:alnum:]]*)$ ]]
 	then
@@ -21,19 +22,19 @@ do
   	fi
 done
 
-if ! nslookup $v_get_hostname &>/dev/null
+if ! nslookup "$v_get_hostname" &>/dev/null
 then
 	echo -e "\nNo DNS record found for \"$v_get_hostname\"\n"	
 	while :
 	do
-		read -p "Enter (y) to create DNS record for $v_get_hostname or (n) to exit the script : " v_confirmation
+		read -r -p "Enter (y) to create DNS record for $v_get_hostname or (n) to exit the script : " v_confirmation
 
 		if [[ $v_confirmation == "y" ]]
 		then
 			echo -e "\nExecuting the script $v_dns_record_creator . . .\n"
-			$v_dns_record_creator $v_get_hostname
+			$v_dns_record_creator "$v_get_hostname"
 
-			if nslookup $v_get_hostname &>/dev/null
+			if nslookup "$v_get_hostname" &>/dev/null
 			then
 				echo -e "\nDNS Record for $v_get_hostname created successfully, proceeding further . . .\n"
 				break
@@ -58,11 +59,12 @@ else
 
 fi
 
-v_get_ipv4_address=$(nslookup $v_get_hostname | grep ^Name -A 1 | grep Address | cut -d ":" -f 2 | tr -d '[[:space:]]')
+# shellcheck disable=SC2021
+v_get_ipv4_address=$(nslookup "$v_get_hostname" | grep ^Name -A 1 | grep Address | cut -d ":" -f 2 | tr -d '[[:space:]]')
 
 echo -e "\nSetting up network parameters . . .\n"
 
-if echo $v_get_ipv4_address | grep 192.168.168 &>/dev/null
+if echo "$v_get_ipv4_address" | grep 192.168.168 &>/dev/null
 then
 	v_get_ipv4_gateway='192.168.168.1'
 	v_get_ipv4_nameserver='192.168.168.4'
@@ -71,7 +73,7 @@ then
 	v_get_win_hostname='prod-win'
 	$v_pxe_server_updater 1
 
-elif echo $v_get_ipv4_address | grep 10.10.10 &>/dev/null
+elif echo "$v_get_ipv4_address" | grep 10.10.10 &>/dev/null
 then
 	v_get_ipv4_gateway='10.10.10.1'
 	v_get_ipv4_nameserver='10.10.10.4'
@@ -81,7 +83,7 @@ then
 	$v_pxe_server_updater 2
 
 
-elif echo $v_get_ipv4_address | grep 172.16.16 &>/dev/null
+elif echo "$v_get_ipv4_address" | grep 172.16.16 &>/dev/null
 then
 	v_get_ipv4_gateway='172.16.16.1'
 	v_get_ipv4_nameserver='172.16.16.4'
@@ -97,29 +99,30 @@ echo -e "\nGenerating kickstart files for $v_get_hostname under $v_kickstart_dir
 
 if [[ ! -d $v_kickstart_dir ]]
 then	
-	mkdir -p $v_kickstart_dir
+	mkdir -p "$v_kickstart_dir"
 else
-	rm -rf $v_kickstart_dir/*
+	rm -rf "${v_kickstart_dir:?}"/*
 fi
 
-cd $v_ks_manage_dir && rsync -avPh grub-cfg-template local-repo ks-templates/ $v_kickstart_dir/ 
+cd $v_ks_manage_dir && rsync -avPh grub-cfg-template local-repo ks-templates/ "$v_kickstart_dir"/ 
 
-for v_file in $(find $v_kickstart_dir/ -type f )
+# shellcheck disable=SC2044
+for v_file in $(find "$v_kickstart_dir"/ -type f )
 do
-	sed -i "s/get_ipv4_address/$v_get_ipv4_address/g" $v_file
-	sed -i "s/get_ipv4_netmask/$v_get_ipv4_netmask/g" $v_file
-        sed -i "s/get_ipv4_gateway/$v_get_ipv4_gateway/g" $v_file
-	sed -i "s/get_ipv4_nameserver/$v_get_ipv4_nameserver/g" $v_file
-	sed -i "s/get_ipv4_domain/$v_get_ipv4_domain/g" $v_file
-       	sed -i "s/get_hostname/$v_get_hostname/g" $v_file
-	sed -i "s/get_ntp_pool_name/$v_get_ntp_pool_name/g" $v_file
-	sed -i "s/get_web_server_name/$v_get_web_server_name/g" $v_file 
-	sed -i "s/get_win_hostname/$v_get_win_hostname/g" $v_file
+	sed -i "s/get_ipv4_address/$v_get_ipv4_address/g" "$v_file"
+	sed -i "s/get_ipv4_netmask/$v_get_ipv4_netmask/g" "$v_file"
+    sed -i "s/get_ipv4_gateway/$v_get_ipv4_gateway/g" "$v_file"
+	sed -i "s/get_ipv4_nameserver/$v_get_ipv4_nameserver/g" "$v_file"
+	sed -i "s/get_ipv4_domain/$v_get_ipv4_domain/g" "$v_file"
+    sed -i "s/get_hostname/$v_get_hostname/g" "$v_file"
+	sed -i "s/get_ntp_pool_name/$v_get_ntp_pool_name/g" "$v_file"
+	sed -i "s/get_web_server_name/$v_get_web_server_name/g" "$v_file" 
+	sed -i "s/get_win_hostname/$v_get_win_hostname/g" "$v_file"
 done
 
 echo -e "\nUpdating /var/lib/tftpboot/grub.cfg . . .\n"
 
-rsync -avPh $v_kickstart_dir/grub-cfg-template /var/lib/tftpboot/grub.cfg
+rsync -avPh "$v_kickstart_dir"/grub-cfg-template /var/lib/tftpboot/grub.cfg
 
 echo -e "\nkickstart files are stored under $v_kickstart_dir"
 

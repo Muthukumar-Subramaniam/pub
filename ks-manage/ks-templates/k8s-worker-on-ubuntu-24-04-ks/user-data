@@ -30,7 +30,6 @@ autoinstall:
     - netcat-openbsd
     - nmap
     - lsof
-    - mailutils
 
   package_update: true
 
@@ -55,9 +54,16 @@ autoinstall:
       - wget -O /root/.ssh/authorized_keys http://get_web_server_name/authorized_keys
       - chmod 0600 /home/muthuks/.ssh/authorized_keys /root/.ssh/authorized_keys
       - chown -R muthuks:muthuks /home/muthuks/.ssh
-      - touch /etc/cloud/cloud-init.disabled
       - if ls /etc/netplan/*cloud* &>/dev/null;then mv /etc/netplan/*cloud* /etc/netplan/old/;fi 
+      - mkdir -p /root/configure-k8s-worker-ubuntu
+      - wget -P /root/configure-k8s-worker-ubuntu/ http://get_web_server_name/k8s/ubuntu/configure-k8s-worker-ubuntu.sh
+      - wget -P /root/configure-k8s-worker-ubuntu/ http://get_web_server_name/k8s/ubuntu/configure-k8s-worker-ubuntu.service
+      - chmod +x /root/configure-k8s-worker-ubuntu/configure-k8s-worker-ubuntu.sh
+      - cp -p /root/configure-k8s-worker-ubuntu/configure-k8s-worker-ubuntu.service /etc/systemd/system/
+      - systemctl daemon-reload
+      - systemctl enable configure-k8s-worker-ubuntu.service
       - apt clean && apt update && apt upgrade -y
+      - touch /etc/cloud/cloud-init.disabled
       - reboot
 
   keyboard:
