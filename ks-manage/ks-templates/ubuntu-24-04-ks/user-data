@@ -14,8 +14,10 @@ autoinstall:
 
   packages:
     - vim
+    - less
     - bash-completion
     - smbclient
+    - cifs-utils
     - nfs-common
     - tmux
     - net-tools
@@ -49,6 +51,7 @@ autoinstall:
         - root:$6$lszCEKBW0uYUhm5N$16w1FJB/zUMQCVvTWQxtye0TqX7yDEM87HP2Lz84bqPCGvry4B8cWYcaClJsPCmPs4Z1/TSKkFdsK/u/WJg990
     runcmd:
       - /usr/bin/echo -e "HISTSIZE=-1\nHISTFILESIZE=-1" >>/root/.bashrc
+      - echo "PS1='[\[\033]0;\$TITLEPREFIX:\007\]\[\033[32m\]\u@\h \[\033[33m\]\W\[\033[36m\]\[\033[0m\]]# '" >>/root/.bashrc
       - mkdir -p /home/muthuks/.ssh /root/.ssh
       - chmod 0700 /home/muthuks/.ssh /root/.ssh
       - wget -O /home/muthuks/.ssh/authorized_keys http://get_web_server_name/authorized_keys
@@ -56,7 +59,11 @@ autoinstall:
       - chmod 0600 /home/muthuks/.ssh/authorized_keys /root/.ssh/authorized_keys
       - chown -R muthuks:muthuks /home/muthuks/.ssh
       - touch /etc/cloud/cloud-init.disabled
-      - if ls /etc/netplan/*cloud* &>/dev/null;then mv /etc/netplan/*cloud* /etc/netplan/old/;fi 
+      - if ls /etc/netplan/*cloud* &>/dev/null;then mv /etc/netplan/*cloud* /etc/netplan/old/;fi
+      - apt install chrony -y
+      - cp -p /etc/chrony/chrony.conf /etc/chrony/chrony.conf_bkp_orig
+      - sed -i 's/^pool/#pool/g' /etc/chrony/chrony.conf
+      - echo 'pool get_ntp_pool_name.get_ipv4_domain iburst' >> /etc/chrony/chrony.conf
       - apt clean && apt update && apt upgrade -y
       - reboot
 
@@ -155,10 +162,10 @@ autoinstall:
     - V_count=0;for v_interface in $(ls /sys/class/net | grep -v lo);do /target/usr/bin/echo -e "[Match]\nMACAddress=$(ip link | grep $v_interface -A 1 | grep link/ether | cut -d " " -f 6)\n\n[Link]\nName=eth$V_count" >/target/etc/systemd/network/7$V_count-eth$V_count.link;V_count=$((V_count+1));done
     - mkdir -p /target/etc/netplan/old
     - if ls /target/etc/netplan/*.yaml;then mv /target/etc/netplan/*.yaml /target/etc/netplan/old;fi
-    - wget -P /target/etc/netplan/ http://get_web_server_name/ks-manager-kickstarts/get_hostname/ubuntu-24-04-ks/eth0.yaml  
-    - wget -P /target/etc/netplan/ http://get_web_server_name/ks-manager-kickstarts/get_hostname/ubuntu-24-04-ks/auto-create-int.yaml  
+    - wget -P /target/etc/netplan/ http://get_web_server_name/ks-manager-kickstarts/get_hostname/ubuntu-24-04-ks/eth0.yaml
+    - wget -P /target/etc/netplan/ http://get_web_server_name/ks-manager-kickstarts/get_hostname/ubuntu-24-04-ks/auto-create-int.yaml
     - V_count=1;for v_interface in $(ls /target/etc/systemd/network/ | grep -v eth0);do sed "s/eth-muthuks/eth$V_count/g" /target/etc/netplan/auto-create-int.yaml >/target/etc/netplan/eth$V_count.yaml;V_count=$((V_count+1));done
+    - chmod 600 /target/etc/netplan/eth*.yaml
     - rm -rf /target/etc/netplan/auto-create-int.yaml
     - echo "muthuks ALL=(ALL) NOPASSWD:ALL" >/target/etc/sudoers.d/muthuks
     - echo "PermitRootLogin yes" >>/target/etc/ssh/sshd_config
-    - echo "NTP=get_ntp_pool_name.get_ipv4_domain" >>/target/etc/systemd/timesyncd.conf

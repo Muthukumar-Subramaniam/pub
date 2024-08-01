@@ -992,6 +992,7 @@
 	/usr/bin/chmod 0600 /home/muthuks/.ssh/authorized_keys /root/.ssh/authorized_keys
 	/usr/bin/chown -R muthuks:users /home/muthuks/.ssh
 	/usr/bin/echo -e "HISTSIZE=-1\nHISTFILESIZE=-1" >>/root/.bashrc
+	/usr/bin/echo "PS1='[\[\033]0;\$TITLEPREFIX:\007\]\[\033[32m\]\u@\h \[\033[33m\]\W\[\033[36m\]\[\033[0m\]]# '" >>/root/.bashrc
 	/usr/bin/echo "muthuks ALL=(ALL) NOPASSWD:ALL" >/etc/sudoers.d/muthuks
 	/usr/bin/systemctl disable kdump
 	for v_repo_file in $(ls /etc/zypp/repos.d);do if grep get_web_server_name /etc/zypp/repos.d/$v_repo_file;then rm -rf /etc/zypp/repos.d/$v_repo_file;fi;done

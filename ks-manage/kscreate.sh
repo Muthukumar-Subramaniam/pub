@@ -12,7 +12,12 @@ do
 	echo -e "No need to append the domain name muthuks.local.lab\n"
 
 	# shellcheck disable=SC2162
-	read -r -p "Please Enter the Hostname for which Kickstarts are required : " v_get_hostname
+	if [ -z $1 ]
+	then
+		read -r -p "Please Enter the Hostname for which Kickstarts are required : " v_get_hostname
+	else
+		v_get_hostname=$1
+	fi
 
 	if [[ $v_get_hostname =~ ^[[:alpha:]]([-[:alnum:]]*)$ ]]
 	then
