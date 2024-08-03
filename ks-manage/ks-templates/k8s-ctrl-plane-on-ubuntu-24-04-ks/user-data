@@ -57,6 +57,8 @@ autoinstall:
       - wget -O /root/.ssh/authorized_keys http://get_web_server_name/authorized_keys
       - chmod 0600 /home/muthuks/.ssh/authorized_keys /root/.ssh/authorized_keys
       - chown -R muthuks:muthuks /home/muthuks/.ssh
+      - wget -P /usr/local/share/ca-certificates/ http://get_web_server_name/ca-certs/get_web_server_name-apache-selfsigned.crt
+      - update-ca-certificates
       - if ls /etc/netplan/*cloud* &>/dev/null;then mv /etc/netplan/*cloud* /etc/netplan/old/;fi
       - mkdir /scripts_by_muthu /downloads
       - cp -p /etc/fstab /etc/fstab_bkp_orig

@@ -73,6 +73,7 @@ if echo "$v_get_ipv4_address" | grep 192.168.168 &>/dev/null
 then
 	v_get_ipv4_gateway='192.168.168.1'
 	v_get_ipv4_nameserver='192.168.168.4'
+	v_get_tftp_server_name='prod-tftp'
 	v_get_ntp_pool_name='prod-ntp-pool'
 	v_get_web_server_name='prod-web'
 	v_get_win_hostname='prod-win'
@@ -82,6 +83,7 @@ elif echo "$v_get_ipv4_address" | grep 10.10.10 &>/dev/null
 then
 	v_get_ipv4_gateway='10.10.10.1'
 	v_get_ipv4_nameserver='10.10.10.4'
+	v_get_tftp_server_name='test-tftp'
 	v_get_ntp_pool_name='test-ntp-pool'
 	v_get_web_server_name='test-web'
 	v_get_win_hostname='test-win'
@@ -92,6 +94,7 @@ elif echo "$v_get_ipv4_address" | grep 172.16.16 &>/dev/null
 then
 	v_get_ipv4_gateway='172.16.16.1'
 	v_get_ipv4_nameserver='172.16.16.4'
+	v_get_tftp_server_name='dev-tftp'
 	v_get_ntp_pool_name='dev-ntp-pool'
 	v_get_web_server_name='dev-web'
 	v_get_win_hostname='dev-win'
@@ -116,13 +119,14 @@ for v_file in $(find "$v_kickstart_dir"/ -type f )
 do
 	sed -i "s/get_ipv4_address/$v_get_ipv4_address/g" "$v_file"
 	sed -i "s/get_ipv4_netmask/$v_get_ipv4_netmask/g" "$v_file"
-    sed -i "s/get_ipv4_gateway/$v_get_ipv4_gateway/g" "$v_file"
+    	sed -i "s/get_ipv4_gateway/$v_get_ipv4_gateway/g" "$v_file"
 	sed -i "s/get_ipv4_nameserver/$v_get_ipv4_nameserver/g" "$v_file"
 	sed -i "s/get_ipv4_domain/$v_get_ipv4_domain/g" "$v_file"
-    sed -i "s/get_hostname/$v_get_hostname/g" "$v_file"
+    	sed -i "s/get_hostname/$v_get_hostname/g" "$v_file"
 	sed -i "s/get_ntp_pool_name/$v_get_ntp_pool_name/g" "$v_file"
 	sed -i "s/get_web_server_name/$v_get_web_server_name/g" "$v_file" 
 	sed -i "s/get_win_hostname/$v_get_win_hostname/g" "$v_file"
+	sed -i "s/get_tftp_server_name/${v_get_tftp_server_name}.muthuks.local.lab/g" "$v_file"
 done
 
 echo -e "\nUpdating /var/lib/tftpboot/grub.cfg . . .\n"

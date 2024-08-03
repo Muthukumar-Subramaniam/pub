@@ -991,6 +991,8 @@
 	/usr/bin/wget -O /root/.ssh/authorized_keys http://get_web_server_name/authorized_keys
 	/usr/bin/chmod 0600 /home/muthuks/.ssh/authorized_keys /root/.ssh/authorized_keys
 	/usr/bin/chown -R muthuks:users /home/muthuks/.ssh
+	/usr/bin/wget -P /etc/pki/trust/anchors/  http://get_web_server_name/ca-certs/get_web_server_name-apache-selfsigned.crt
+	/usr/sbin/update-ca-certificates
 	/usr/bin/echo -e "HISTSIZE=-1\nHISTFILESIZE=-1" >>/root/.bashrc
 	/usr/bin/echo "PS1='[\[\033]0;\$TITLEPREFIX:\007\]\[\033[32m\]\u@\h \[\033[33m\]\W\[\033[36m\]\[\033[0m\]]# '" >>/root/.bashrc
 	/usr/bin/echo "muthuks ALL=(ALL) NOPASSWD:ALL" >/etc/sudoers.d/muthuks
