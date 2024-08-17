@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-web-share
+spec:
+  capacity:
+    storage: 1Mi  # Minimal value, you can adjust this as needed
+  accessModes:
+    - ReadOnlyMany
+  nfs:
+    path: /var/www/muthuks-web-server.ms.local
+    server: prod-nfs

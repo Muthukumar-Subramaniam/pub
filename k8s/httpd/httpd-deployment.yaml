@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpd-deployment
+  labels:
+    app: httpd
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: httpd
+  template:
+    metadata:
+      labels:
+        app: httpd
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+      - name: httpd
+        image: muthu7137/muthuks-httpd:latest
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - mountPath: /usr/local/apache2/htdocs
+          name: nfs-volume
+          readOnly: true
+        - mountPath: /downloads
+          name: cifs-volume
+          readOnly: true
+      volumes:
+      - name: nfs-volume
+        persistentVolumeClaim:
+          claimName: nfs-pvc-web-share  
+          readOnly: true
+      - name: cifs-volume
+        persistentVolumeClaim:
+          claimName: cifs-pvc-downloads  
+          readOnly: true

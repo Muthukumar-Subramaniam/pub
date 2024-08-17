@@ -1,0 +1,16 @@
+[server]
+muthuks-server
+
+[clients]
+prod-vm1
+prod-vm2
+prod-vm3
+[clients:vars]
+ansible_ssh_host_key_checking=no
+
+[k8s]
+prod-k8s-cp1
+prod-k8s-n1
+prod-k8s-n2
+[k8s:vars]
+ansible_ssh_host_key_checking=no

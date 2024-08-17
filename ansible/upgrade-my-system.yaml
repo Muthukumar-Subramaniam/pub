@@ -1,0 +1,14 @@
+---
+- name: Ansible Playbook to Upgrade My Linux Nodes
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Copying the Upgrade Script to Remote Linux Nodes
+      copy:
+        src: /scripts_by_muthu/muthuks-server/upgrade-my-system.sh
+        dest: /root/upgrade-my-system.sh
+        mode: 0754
+
+    - name: Executing the Upgrade Script in Remote Linux Nodes
+      command: /root/upgrade-my-system.sh

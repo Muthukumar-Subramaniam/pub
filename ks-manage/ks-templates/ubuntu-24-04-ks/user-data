@@ -1,0 +1,172 @@
+#cloud-config
+##After installation autoinstall steps are stored in the system under /var/log/installer/autoinstall-user-data
+autoinstall:
+  version: 1
+
+  refresh-installer:
+
+  update: yes
+
+  source:
+   id: ubuntu-server-minimal
+  
+  update_packages: true
+
+  packages:
+    - vim
+    - less
+    - bash-completion
+    - smbclient
+    - cifs-utils
+    - nfs-common
+    - tmux
+    - net-tools
+    - sysstat
+    - zip
+    - tcpdump
+    - traceroute
+    - wget
+    - inetutils-ping
+    - dnsutils
+    - rsync
+    - netcat-openbsd
+    - nmap
+    - lsof
+
+  package_update: true
+
+  package_upgrade: true
+
+  identity:
+    hostname: get_hostname.get_ipv4_domain
+    password: "$6$lszCEKBW0uYUhm5N$16w1FJB/zUMQCVvTWQxtye0TqX7yDEM87HP2Lz84bqPCGvry4B8cWYcaClJsPCmPs4Z1/TSKkFdsK/u/WJg990"
+    username: muthuks
+
+  user-data:
+    timezone: Asia/Kolkata
+    chpasswd:
+      expire: false
+      list:
+        - root:$6$lszCEKBW0uYUhm5N$16w1FJB/zUMQCVvTWQxtye0TqX7yDEM87HP2Lz84bqPCGvry4B8cWYcaClJsPCmPs4Z1/TSKkFdsK/u/WJg990
+    runcmd:
+      - /usr/bin/echo -e "HISTSIZE=-1\nHISTFILESIZE=-1" >>/root/.bashrc
+      - echo "PS1='[\[\033]0;\$TITLEPREFIX:\007\]\[\033[32m\]\u@\h \[\033[33m\]\W\[\033[36m\]\[\033[0m\]]# '" >>/root/.bashrc
+      - mkdir -p /home/muthuks/.ssh /root/.ssh
+      - chmod 0700 /home/muthuks/.ssh /root/.ssh
+      - wget -O /home/muthuks/.ssh/authorized_keys http://get_web_server_name.get_ipv4_domain/authorized_keys
+      - wget -O /root/.ssh/authorized_keys http://get_web_server_name.get_ipv4_domain/authorized_keys
+      - chmod 0600 /home/muthuks/.ssh/authorized_keys /root/.ssh/authorized_keys
+      - chown -R muthuks:muthuks /home/muthuks/.ssh
+      - wget -P /usr/local/share/ca-certificates/ http://get_web_server_name.get_ipv4_domain/ca-certs/get_web_server_name.get_ipv4_domain-apache-selfsigned.crt
+      - update-ca-certificates
+      - touch /etc/cloud/cloud-init.disabled
+      - if ls /etc/netplan/*cloud* &>/dev/null;then mv /etc/netplan/*cloud* /etc/netplan/old/;fi
+      - apt install chrony -y
+      - cp -p /etc/chrony/chrony.conf /etc/chrony/chrony.conf_bkp_orig
+      - sed -i 's/^pool/#pool/g' /etc/chrony/chrony.conf
+      - echo 'pool get_ntp_pool_name.get_ipv4_domain iburst' >> /etc/chrony/chrony.conf
+      - apt clean && apt update && apt upgrade -y
+      - reboot
+
+  keyboard:
+    layout: us
+    toggle: null
+    variant: ''
+
+  locale: en_US.UTF-8
+
+  ssh:
+    allow-pw: true
+    authorized-keys: []
+    install-server: true
+
+  storage:
+    config:
+    - ptable: gpt
+      path: /dev/nvme0n1
+      wipe: superblock-recursive
+      preserve: false
+      name: ''
+      grub_device: false
+      id: disk-nvme0n1
+      type: disk
+    - device: disk-nvme0n1
+      size: 134217728
+      wipe: superblock
+      flag: boot
+      number: 1
+      preserve: false
+      grub_device: true
+##      path: /dev/nvme0n1p1  <--- new subiquity fix
+      id: partition-0
+      type: partition
+    - fstype: fat32
+      volume: partition-0
+      preserve: false
+      id: format-0
+      type: format
+    - device: disk-nvme0n1
+      size: 536870912
+      wipe: superblock
+      number: 2
+      preserve: false
+##      path: /dev/nvme0n1p2  <--- new subiquity fix
+      id: partition-1
+      type: partition
+    - fstype: xfs
+      volume: partition-1
+      preserve: false
+      id: format-1
+      type: format
+    - device: disk-nvme0n1
+      size: -1
+      wipe: superblock
+      number: 3
+      preserve: false
+##      path: /dev/nvme0n1p3  <--- new subiquity fix
+      id: partition-2
+      type: partition
+    - name: ubuntu
+      devices:
+      - partition-2
+      preserve: false
+      id: ubuntu
+      type: lvm_volgroup
+    - name: root
+      volgroup: ubuntu
+      size: 100%
+      wipe: superblock
+      preserve: false
+      path: /dev/ubuntu/root
+      id: root
+      type: lvm_partition
+    - fstype: xfs
+      volume: root
+      preserve: false
+      id: format-2
+      type: format
+    - path: /
+      device: format-2
+      id: mount-2
+      type: mount
+    - path: /boot
+      device: format-1
+      id: mount-1
+      type: mount
+    - path: /boot/efi
+      device: format-0
+      id: mount-0
+      type: mount
+
+  late-commands:
+    - mkdir -p /target/etc/systemd/network
+    - V_count=0;for v_interface in $(ls /sys/class/net | grep -v lo);do /target/usr/bin/echo -e "[Match]\nMACAddress=$(ip link | grep $v_interface -A 1 | grep link/ether | cut -d " " -f 6)\n\n[Link]\nName=eth$V_count" >/target/etc/systemd/network/7$V_count-eth$V_count.link;V_count=$((V_count+1));done
+    - mkdir -p /target/etc/netplan/old
+    - if ls /target/etc/netplan/*.yaml;then mv /target/etc/netplan/*.yaml /target/etc/netplan/old;fi
+    - wget -P /target/etc/netplan/ http://get_web_server_name.get_ipv4_domain/ks-manager-kickstarts/get_hostname.get_ipv4_domain/ubuntu-24-04-ks/eth0.yaml
+    - wget -P /target/etc/netplan/ http://get_web_server_name.get_ipv4_domain/ks-manager-kickstarts/get_hostname.get_ipv4_domain/ubuntu-24-04-ks/auto-create-int.yaml
+    - V_count=1;for v_interface in $(ls /target/etc/systemd/network/ | grep -v eth0);do sed "s/eth-muthuks/eth$V_count/g" /target/etc/netplan/auto-create-int.yaml >/target/etc/netplan/eth$V_count.yaml;V_count=$((V_count+1));done
+    - chmod 600 /target/etc/netplan/eth*.yaml
+    - rm -rf /target/etc/netplan/auto-create-int.yaml
+    - echo "muthuks ALL=(ALL) NOPASSWD:ALL" >/target/etc/sudoers.d/muthuks
+    - echo "PermitRootLogin yes" >>/target/etc/ssh/sshd_config

@@ -1,0 +1,87 @@
+########## ConfigMap ##########
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: httpd-configmap
+data:
+  my-httpd-custom.conf: |
+    <VirtualHost *:80>
+      ServerName prod-httpd.ms.local
+      ServerAlias prod-httpd
+      DocumentRoot "/usr/local/apache2/htdocs"
+      <Directory "/usr/local/apache2/htdocs">
+        Options Indexes MultiViews FollowSymLinks
+        AllowOverride all
+        Require all granted
+      </Directory>
+    </VirtualHost>
+---
+########## Deployment ##########
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpd-deployment
+  labels:
+    app: httpd
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: httpd
+  template:
+    metadata:
+      labels:
+        app: httpd
+    spec:
+      terminationGracePeriodSeconds: 1
+      volumes:
+      - name: httpd-config-volume
+        configMap:
+          name: httpd-configmap
+          defaultMode: 0644
+      - name: nfs-volume
+        persistentVolumeClaim:
+          claimName: nfs-pvc-web-share  
+          readOnly: true
+      - name: cifs-volume
+        persistentVolumeClaim:
+          claimName: cifs-pvc-downloads  
+          readOnly: true
+      containers:
+      - name: httpd
+        image: httpd:latest
+          #imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/bash", "-c", "echo Include conf/extra/my-httpd-custom.conf >> /usr/local/apache2/conf/httpd.conf && apachectl restart"]
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - mountPath: /usr/local/apache2/htdocs
+          name: nfs-volume
+          readOnly: true
+        - mountPath: /downloads
+          name: cifs-volume
+          readOnly: true
+        - mountPath: /usr/local/apache2/conf/extra/my-httpd-custom.conf
+          subPath: my-httpd-custom.conf
+          name: httpd-config-volume
+---
+########## Service ##########
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpd-service
+spec:
+  selector:
+    app: httpd
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: NodePort
+  externalIPs:
+    - 192.168.168.26
+---

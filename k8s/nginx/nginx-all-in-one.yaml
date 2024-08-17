@@ -1,0 +1,85 @@
+########## ConfigMap ##########
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-configmap
+data:
+  nginx-custom.conf: |
+    server {
+        listen       80;
+        server_name  prod-nginx prod-nginx.ms.local;
+        location / {
+            root   /usr/share/nginx/html;
+            autoindex on;
+        }
+
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   /usr/share/nginx/html;
+        }
+    }
+---
+########## Deployment ##########
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      terminationGracePeriodSeconds: 1
+      volumes:
+      - name: nginx-config-volume
+        configMap:
+          name: nginx-configmap
+          defaultMode: 0644
+      - name: nfs-volume
+        persistentVolumeClaim:
+          claimName: nfs-pvc-web-share  
+          readOnly: true
+      - name: cifs-volume
+        persistentVolumeClaim:
+          claimName: cifs-pvc-downloads
+          readOnly: true
+      containers:
+      - name: nginx
+        image: nginx:latest
+          #imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - mountPath: /usr/share/nginx/html
+          name: nfs-volume
+          readOnly: true
+        - mountPath: /downloads
+          name: cifs-volume
+          readOnly: true
+        - mountPath: /etc/nginx/conf.d/nginx-custom.conf
+          subPath: nginx-custom.conf
+          name: nginx-config-volume
+---
+########## Service ##########
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+spec:
+  selector:
+    app: nginx
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: NodePort
+  externalIPs:
+    - 192.168.168.27
