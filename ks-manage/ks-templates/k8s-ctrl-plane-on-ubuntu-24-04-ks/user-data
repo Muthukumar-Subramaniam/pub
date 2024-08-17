@@ -60,15 +60,9 @@ autoinstall:
       - wget -P /usr/local/share/ca-certificates/ http://get_web_server_name.get_ipv4_domain/ca-certs/get_web_server_name.get_ipv4_domain-apache-selfsigned.crt
       - update-ca-certificates
       - if ls /etc/netplan/*cloud* &>/dev/null;then mv /etc/netplan/*cloud* /etc/netplan/old/;fi
-#      - mkdir /scripts_by_muthu /downloads
-#      - cp -p /etc/fstab /etc/fstab_bkp_orig
-#      - echo '//get_win_hostname/Scripts_by_muthu /scripts_by_muthu  cifs rw,credentials=/root/smbcredentials 0 0' >>/etc/fstab
-#      - echo '//get_win_hostname/Downloads /downloads  cifs rw,credentials=/root/smbcredentials 0 0' >>/etc/fstab
-#      - wget -P /root/ http://get_web_server_name.get_ipv4_domain/k8s/smbcredentials
-#      - chmod 0600 /root/smbcredentials
       - mkdir -p /root/configure-k8s-ctrl-plane-ubuntu
-      - wget -P /root/configure-k8s-ctrl-plane-ubuntu/ http://get_web_server_name.get_ipv4_domain/k8s/ubuntu/configure-k8s-ctrl-plane-ubuntu.sh
-      - wget -P /root/configure-k8s-ctrl-plane-ubuntu/ http://get_web_server_name.get_ipv4_domain/k8s/ubuntu/configure-k8s-ctrl-plane-ubuntu.service
+      - wget -P /root/configure-k8s-ctrl-plane-ubuntu/ http://get_web_server_name.get_ipv4_domain/k8s-install/ubuntu/configure-k8s-ctrl-plane-ubuntu.sh
+      - wget -P /root/configure-k8s-ctrl-plane-ubuntu/ http://get_web_server_name.get_ipv4_domain/k8s-install/ubuntu/configure-k8s-ctrl-plane-ubuntu.service
       - chmod +x /root/configure-k8s-ctrl-plane-ubuntu/configure-k8s-ctrl-plane-ubuntu.sh
       - cp -p /root/configure-k8s-ctrl-plane-ubuntu/configure-k8s-ctrl-plane-ubuntu.service /etc/systemd/system/
       - systemctl daemon-reload

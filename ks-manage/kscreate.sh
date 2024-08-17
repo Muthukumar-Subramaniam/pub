@@ -1,10 +1,12 @@
 #!/bin/bash
 v_dns_record_creator='/scripts_by_muthu/muthuks-server/named-manage/create-dns-records.sh'
 v_pxe_server_updater='/scripts_by_muthu/muthuks-server/net-boot-pxe-set.sh'
-v_get_ipv4_domain='ms.local'
-v_get_ipv4_netmask='255.255.255.0'
 v_ks_manage_dir='/scripts_by_muthu/muthuks-server/ks-manage'
 v_kickstart_dir='/var/www/muthuks-web-server.ms.local/ks-manager-kickstarts'
+v_get_ipv4_domain='ms.local'
+v_get_ipv4_netmask='255.255.255.0'
+v_get_rhel_activation_key=$(cat /scripts_by_muthu/muthuks-server/rhel-activation-key.base64 | base64 -d)
+v_get_time_of_last_update=$(date | sed  "s/ /-/g")
 
 while :
 do
@@ -112,7 +114,7 @@ else
 	rm -rf "${v_kickstart_dir:?}"/*
 fi
 
-cd $v_ks_manage_dir && rsync -avPh grub-cfg-template local-repo ks-templates/ "$v_kickstart_dir"/ 
+cd $v_ks_manage_dir && rsync -avPh grub-template.cfg local-repo ks-templates/ "$v_kickstart_dir"/ 
 
 # shellcheck disable=SC2044
 for v_file in $(find "$v_kickstart_dir"/ -type f )
@@ -127,11 +129,13 @@ do
 	sed -i "s/get_web_server_name/$v_get_web_server_name/g" "$v_file" 
 	sed -i "s/get_win_hostname/$v_get_win_hostname/g" "$v_file"
 	sed -i "s/get_tftp_server_name/${v_get_tftp_server_name}.ms.local/g" "$v_file"
+	sed -i "s/get_rhel_activation_key/${v_get_rhel_activation_key}/g" "$v_file"
+	sed -i "s/get_time_of_last_update/${v_get_time_of_last_update}/g" "$v_file"
 done
 
 echo -e "\nUpdating /var/lib/tftpboot/grub.cfg . . .\n"
 
-rsync -avPh "$v_kickstart_dir"/grub-cfg-template /var/lib/tftpboot/grub.cfg
+rsync -avPh "$v_kickstart_dir"/grub-template.cfg /var/lib/tftpboot/grub.cfg
 
 echo -e "\nkickstart files are stored under $v_kickstart_dir"
 

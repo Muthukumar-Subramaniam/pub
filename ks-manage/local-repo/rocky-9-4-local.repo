@@ -3,7 +3,7 @@ name=Rocky 9.4 - BaseOS
 metadata_expire=-1
 gpgcheck=1
 enabled=1
-baseurl=http://get_web_server_name/rocky-9-4/BaseOS/
+baseurl=http://get_web_server_name.get_ipv4_domain/rocky-9-4/BaseOS/
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
 
 [AppStream]
@@ -11,5 +11,5 @@ name=Rocky 9.4 - AppStream
 metadata_expire=-1
 gpgcheck=1
 enabled=1
-baseurl=http://get_web_server_name/rocky-9-4/AppStream/
+baseurl=http://get_web_server_name.get_ipv4_domain/rocky-9-4/AppStream/
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release

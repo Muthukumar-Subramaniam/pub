@@ -61,8 +61,8 @@ autoinstall:
       - update-ca-certificates
       - if ls /etc/netplan/*cloud* &>/dev/null;then mv /etc/netplan/*cloud* /etc/netplan/old/;fi
       - mkdir -p /root/configure-k8s-worker-ubuntu
-      - wget -P /root/configure-k8s-worker-ubuntu/ http://get_web_server_name.get_ipv4_domain/k8s/ubuntu/configure-k8s-worker-ubuntu.sh
-      - wget -P /root/configure-k8s-worker-ubuntu/ http://get_web_server_name.get_ipv4_domain/k8s/ubuntu/configure-k8s-worker-ubuntu.service
+      - wget -P /root/configure-k8s-worker-ubuntu/ http://get_web_server_name.get_ipv4_domain/k8s-install/ubuntu/configure-k8s-worker-ubuntu.sh
+      - wget -P /root/configure-k8s-worker-ubuntu/ http://get_web_server_name.get_ipv4_domain/k8s-install/ubuntu/configure-k8s-worker-ubuntu.service
       - chmod +x /root/configure-k8s-worker-ubuntu/configure-k8s-worker-ubuntu.sh
       - cp -p /root/configure-k8s-worker-ubuntu/configure-k8s-worker-ubuntu.service /etc/systemd/system/
       - systemctl daemon-reload
