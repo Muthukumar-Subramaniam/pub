@@ -1001,10 +1001,10 @@
 	/usr/bin/echo "muthuks ALL=(ALL) NOPASSWD:ALL" >/etc/sudoers.d/muthuks
 	/usr/bin/systemctl disable kdump
 	for v_repo_file in $(ls /etc/zypp/repos.d);do if grep get_web_server_name.get_ipv4_domain /etc/zypp/repos.d/$v_repo_file;then rm -rf /etc/zypp/repos.d/$v_repo_file;fi;done
-	/usr/bin/mkdir -p /root/configure-k8s-worker-suse
-	/usr/bin/wget -P /root/configure-k8s-worker-suse/ http://get_web_server_name.get_ipv4_domain/k8s-install/suse/configure-k8s-worker-suse.{sh,service}
-	/usr/bin/cp -p /root/configure-k8s-worker-suse/configure-k8s-worker-suse.service /etc/systemd/system/
-	/usr/bin/ln -s /etc/systemd/system/configure-k8s-worker-suse.service /etc/systemd/system/multi-user.target.wants/configure-k8s-worker-suse.service	 
+	/usr/bin/mkdir -p /root/configure-k8s-worker
+	/usr/bin/wget -P /root/configure-k8s-worker/ http://get_web_server_name.get_ipv4_domain/k8s-install/configure-k8s-worker.{sh,service}
+	/usr/bin/cp -p /root/configure-k8s-worker/configure-k8s-worker.service /etc/systemd/system/
+	/usr/bin/ln -s /etc/systemd/system/configure-k8s-worker.service /etc/systemd/system/multi-user.target.wants/configure-k8s-worker.service	 
         ]]></source>
       </script>
     </post-scripts>
