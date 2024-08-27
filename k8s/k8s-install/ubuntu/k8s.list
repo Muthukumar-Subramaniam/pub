@@ -1,2 +1,0 @@
-deb [signed-by=/etc/apt/keyrings/k8s-apt-keyring-v1.31.gpg] https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /
-deb [signed-by=/etc/apt/keyrings/k8s-apt-keyring-v1.30.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /
