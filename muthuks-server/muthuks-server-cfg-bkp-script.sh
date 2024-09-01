@@ -6,6 +6,12 @@ v_temp_cfg_dir="/root/temp-cfg-bkp"
 v_bkp_dir="/scripts_by_muthu/muthuks-server/muthuks-server-cfg-bkp"
 v_bkp_dir_pub="/scripts_by_muthu/pub/muthuks-server/muthuks-server-cfg-bkp"
 
+if [[ "$(id -u)" -ne 0 ]]
+then
+	echo -e "\nPlease run this script as root or using sudo ! \n"
+	exit
+fi
+
 mkdir -p ${v_temp_cfg_dir}
 
 {
@@ -20,19 +26,16 @@ echo -e "\nTaking temperory rsync of ${v_cfg_dir} to ${v_temp_cfg_dir} . . .\n"
 
 rsync -avPh ${v_cfg_dir}/ ${v_temp_cfg_dir}/
 
-#crontab -l >${v_cfg_dir}/crontab-root
-cat /etc/fstab >${v_cfg_dir}/fstab
-
 echo -e "\nRsyncing Necessary Config files to ${v_cfg_dir} . . . \n"
 rsync -avPh /root/mount-iso.sh ${v_cfg_dir}/
 rsync -avPh /etc/systemd/system/mount-iso.service ${v_cfg_dir}/
 rsync -avPh /etc/named.conf /var/named/*ms.local* ${v_cfg_dir}/bind-dns-server-configs/
 rsync -avPh /etc/NetworkManager/system-connections/ ${v_cfg_dir}/network-interface-configs/
 rsync -avPh /etc/dhcp/dhcpd.conf ${v_cfg_dir}/pxe-boot-configs/etc-dhcp-dhcpd.conf
-rsync -avPh /var/lib/tftpboot/grub.cfg ${v_cfg_dir}/pxe-boot-configs/var-lib-tftpboot-grub.cfg
-rsync -avPh /var/lib/tftpboot/grubx64.efi ${v_cfg_dir}/pxe-boot-configs/var-lib-tftpboot-grubx64.efi
+#rsync -avPh /var/lib/tftpboot/grub.cfg ${v_cfg_dir}/pxe-boot-configs/var-lib-tftpboot-grub.cfg
+#rsync -avPh /var/lib/tftpboot/grubx64.efi ${v_cfg_dir}/pxe-boot-configs/var-lib-tftpboot-grubx64.efi
 rsync -avPh /var/lib/tftpboot/pxelinux.cfg ${v_cfg_dir}/pxe-boot-configs/
-rsync -avPh --delete --exclude={{rhel,rocky,almalinux,oraclelinux}-9-4,rhel-{7-9,8-10},ubuntu-24-04,opensuse-15-6} /var/www/muthuks-web-server.ms.local/ ${v_cfg_dir}/pxe-boot-configs/var-www-muthuks-web-server.ms.local/
+rsync -avPh --delete --exclude={{rhel,rocky,almalinux,oraclelinux}-9-4,ubuntu-24-04,opensuse-15-6,ks-manager-kickstarts} /var/www/muthuks-web-server.ms.local/ ${v_cfg_dir}/pxe-boot-configs/var-www-muthuks-web-server.ms.local/
 rsync -avPh /root/.ssh/ ${v_cfg_dir}/ssh/root-ssh/
 rsync -avPh /home/muthuks/.ssh/ ${v_cfg_dir}/ssh/muthuks-ssh/
 rsync -avPh /etc/ssh/ssh_host_* ${v_cfg_dir}/ssh/host-key-ssh/

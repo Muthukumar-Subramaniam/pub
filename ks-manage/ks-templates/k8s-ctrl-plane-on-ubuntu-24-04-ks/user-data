@@ -49,8 +49,12 @@ autoinstall:
       list:
         - root:$6$lszCEKBW0uYUhm5N$16w1FJB/zUMQCVvTWQxtye0TqX7yDEM87HP2Lz84bqPCGvry4B8cWYcaClJsPCmPs4Z1/TSKkFdsK/u/WJg990
     runcmd:
-      - /usr/bin/echo -e "HISTSIZE=-1\nHISTFILESIZE=-1" >>/root/.bashrc
-      - echo "PS1='[\[\033]0;\$TITLEPREFIX:\007\]\[\033[32m\]\u@\h \[\033[33m\]\W\[\033[36m\]\[\033[0m\]]# '" >>/root/.bashrc
+      - /usr/bin/echo -e "HISTSIZE=-1\nHISTFILESIZE=-1" | tee -a /home/muthuks/.bashrc /root/.bashrc
+      - var_PS1_variable_muthuks=$(curl -s -L http://get_web_server_name.get_ipv4_domain/PS1-env-variable-normal-user)
+      - echo "${var_PS1_variable_muthuks}" >> /home/muthuks/.bashrc
+      - var_PS1_variable_root=$(curl -s -L http://get_web_server_name.get_ipv4_domain/PS1-env-variable-root-user)
+      - echo "${var_PS1_variable_root}" >> /root/.bashrc
+      - echo "muthuks ALL=(ALL) NOPASSWD:ALL" >/etc/sudoers.d/muthuks
       - mkdir -p /home/muthuks/.ssh /root/.ssh
       - chmod 0700 /home/muthuks/.ssh /root/.ssh
       - wget -O /home/muthuks/.ssh/authorized_keys http://get_web_server_name.get_ipv4_domain/authorized_keys
@@ -60,13 +64,14 @@ autoinstall:
       - wget -P /usr/local/share/ca-certificates/ http://get_web_server_name.get_ipv4_domain/ca-certs/get_web_server_name.get_ipv4_domain-apache-selfsigned.crt
       - update-ca-certificates
       - if ls /etc/netplan/*cloud* &>/dev/null;then mv /etc/netplan/*cloud* /etc/netplan/old/;fi
-      - mkdir -p /root/configure-k8s-ctrl-plane
-      - wget -P /root/configure-k8s-ctrl-plane/ http://get_web_server_name.get_ipv4_domain/k8s-install/configure-k8s-ctrl-plane.sh
-      - wget -P /root/configure-k8s-ctrl-plane/ http://get_web_server_name.get_ipv4_domain/k8s-install/configure-k8s-ctrl-plane.service
-      - chmod +x /root/configure-k8s-ctrl-plane/configure-k8s-ctrl-plane.sh
-      - cp -p /root/configure-k8s-ctrl-plane/configure-k8s-ctrl-plane.service /etc/systemd/system/
+      - mkdir -p /home/muthuks/install-k8s-on-linux
+      - wget -P /home/muthuks/install-k8s-on-linux/ http://get_web_server_name.get_ipv4_domain/k8s-install/install-k8s-on-linux.sh
+      - wget -P /home/muthuks/install-k8s-on-linux/ http://get_web_server_name.get_ipv4_domain/k8s-install/install-k8s-on-linux-ctrl-plane.service
+      - sed -i "s/ks-manager-provided-web-server-name/get_web_server_name.get_ipv4_domain/g" /home/muthuks/install-k8s-on-linux/install-k8s-on-linux.sh
+      - chown -R muthuks:muthuks /home/muthuks/install-k8s-on-linux
+      - cp -p /home/muthuks/install-k8s-on-linux/install-k8s-on-linux-ctrl-plane.service /etc/systemd/system/
       - systemctl daemon-reload
-      - systemctl enable configure-k8s-ctrl-plane.service
+      - systemctl enable install-k8s-on-linux-ctrl-plane.service
       - apt install chrony -y
       - cp -p /etc/chrony/chrony.conf /etc/chrony/chrony.conf_bkp_orig
       - sed -i 's/^pool/#pool/g' /etc/chrony/chrony.conf
@@ -175,5 +180,3 @@ autoinstall:
     - V_count=1;for v_interface in $(ls /target/etc/systemd/network/ | grep -v eth0);do sed "s/eth-muthuks/eth$V_count/g" /target/etc/netplan/auto-create-int.yaml >/target/etc/netplan/eth$V_count.yaml;V_count=$((V_count+1));done
     - chmod 600 /target/etc/netplan/eth*.yaml
     - rm -rf /target/etc/netplan/auto-create-int.yaml
-    - echo "muthuks ALL=(ALL) NOPASSWD:ALL" >/target/etc/sudoers.d/muthuks
-    - echo "PermitRootLogin yes" >>/target/etc/ssh/sshd_config
