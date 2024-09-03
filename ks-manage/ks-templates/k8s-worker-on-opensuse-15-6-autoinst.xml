@@ -990,16 +990,16 @@
 	#!/bin/bash
 	/usr/bin/mkdir -p /home/muthuks/.ssh /root/.ssh
 	/usr/bin/chmod 0700 /home/muthuks/.ssh /root/.ssh
-	/usr/bin/wget -O /home/muthuks/.ssh/authorized_keys http://get_web_server_name.get_ipv4_domain/authorized_keys
-	/usr/bin/wget -O /root/.ssh/authorized_keys http://get_web_server_name.get_ipv4_domain/authorized_keys
+	/usr/bin/wget -O /home/muthuks/.ssh/authorized_keys http://get_web_server_name.get_ipv4_domain/addons-for-kickstarts/authorized_keys
+	/usr/bin/wget -O /root/.ssh/authorized_keys http://get_web_server_name.get_ipv4_domain/addons-for-kickstarts/authorized_keys
 	/usr/bin/chmod 0600 /home/muthuks/.ssh/authorized_keys /root/.ssh/authorized_keys
 	/usr/bin/chown -R muthuks:users /home/muthuks/.ssh
-	/usr/bin/wget -P /etc/pki/trust/anchors/  http://get_web_server_name.get_ipv4_domain/ca-certs/get_web_server_name.get_ipv4_domain-apache-selfsigned.crt
+	/usr/bin/wget -P /etc/pki/trust/anchors/  http://get_web_server_name.get_ipv4_domain/addons-for-kickstarts/ca-certs/get_web_server_name.get_ipv4_domain-apache-selfsigned.crt
 	/usr/sbin/update-ca-certificates
 	/usr/bin/echo -e "HISTSIZE=-1\nHISTFILESIZE=-1" | /usr/bin/tee -a /home/muthuks/.bashrc /root/.bashrc
-	var_PS1_variable_muthuks=$(/usr/bin/curl -s -L http://get_web_server_name.get_ipv4_domain/PS1-env-variable-normal-user)
+	var_PS1_variable_muthuks=$(/usr/bin/curl -s -L http://get_web_server_name.get_ipv4_domain/addons-for-kickstarts/PS1-env-variable-normal-user)
 	/usr/bin/echo "${var_PS1_variable_muthuks}" >> /home/muthuks/.bashrc
-	var_PS1_variable_root=$(/usr/bin/curl -s -L http://get_web_server_name.get_ipv4_domain/PS1-env-variable-root-user)
+	var_PS1_variable_root=$(/usr/bin/curl -s -L http://get_web_server_name.get_ipv4_domain/addons-for-kickstarts/PS1-env-variable-root-user)
 	/usr/bin/echo "${var_PS1_variable_root}" >> /root/.bashrc
 	/usr/bin/echo "muthuks ALL=(ALL) NOPASSWD:ALL" >/etc/sudoers.d/muthuks
 	/usr/bin/systemctl disable kdump

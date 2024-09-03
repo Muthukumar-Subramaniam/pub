@@ -1,6 +1,12 @@
 #!/bin/bash
 #This script utilizes another script "delete-dns-records.sh" in the current directory
 
+if [[ "$(id -u)" -ne 0 ]]
+then
+	echo -e "\nPlease run this script as root or using sudo ! \n"
+	exit
+fi
+
 f_delete_multiple_similar_records() {
 	v_set_a_record=${1}
 	v_set_num_of_hosts=${2}

@@ -1,6 +1,12 @@
 #!/bin/bash
 v_host_create_file='hosts-create-list'
 
+if [[ "$(id -u)" -ne 0 ]]
+then
+	echo -e "\nPlease run this script as root or using sudo ! \n"
+	exit
+fi
+
 if [[ ! -f ${v_host_create_file} ]];then echo -e "\nFile \"${v_host_create_file}\" doesn't exist!\n";exit;fi 
 
 if [[ ! -s ${v_host_create_file} ]];then echo -e "\nFile \"${v_host_create_file}\" is emty!\n";exit;fi

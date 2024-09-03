@@ -50,18 +50,18 @@ autoinstall:
         - root:$6$lszCEKBW0uYUhm5N$16w1FJB/zUMQCVvTWQxtye0TqX7yDEM87HP2Lz84bqPCGvry4B8cWYcaClJsPCmPs4Z1/TSKkFdsK/u/WJg990
     runcmd:
       - /usr/bin/echo -e "HISTSIZE=-1\nHISTFILESIZE=-1" | tee -a /home/muthuks/.bashrc /root/.bashrc
-      - var_PS1_variable_muthuks=$(curl -s -L http://get_web_server_name.get_ipv4_domain/PS1-env-variable-normal-user)
+      - var_PS1_variable_muthuks=$(curl -s -L http://get_web_server_name.get_ipv4_domain/addons-for-kickstarts/PS1-env-variable-normal-user)
       - echo "${var_PS1_variable_muthuks}" >> /home/muthuks/.bashrc
-      - var_PS1_variable_root=$(curl -s -L http://get_web_server_name.get_ipv4_domain/PS1-env-variable-root-user)
+      - var_PS1_variable_root=$(curl -s -L http://get_web_server_name.get_ipv4_domain/addons-for-kickstarts/PS1-env-variable-root-user)
       - echo "${var_PS1_variable_root}" >> /root/.bashrc
       - echo "muthuks ALL=(ALL) NOPASSWD:ALL" >/etc/sudoers.d/muthuks
       - mkdir -p /home/muthuks/.ssh /root/.ssh
       - chmod 0700 /home/muthuks/.ssh /root/.ssh
-      - wget -O /home/muthuks/.ssh/authorized_keys http://get_web_server_name.get_ipv4_domain/authorized_keys
-      - wget -O /root/.ssh/authorized_keys http://get_web_server_name.get_ipv4_domain/authorized_keys
+      - wget -O /home/muthuks/.ssh/authorized_keys http://get_web_server_name.get_ipv4_domain/addons-for-kickstarts/authorized_keys
+      - wget -O /root/.ssh/authorized_keys http://get_web_server_name.get_ipv4_domain/addons-for-kickstarts/authorized_keys
       - chmod 0600 /home/muthuks/.ssh/authorized_keys /root/.ssh/authorized_keys
       - chown -R muthuks:muthuks /home/muthuks/.ssh
-      - wget -P /usr/local/share/ca-certificates/ http://get_web_server_name.get_ipv4_domain/ca-certs/get_web_server_name.get_ipv4_domain-apache-selfsigned.crt
+      - wget -P /usr/local/share/ca-certificates/ http://get_web_server_name.get_ipv4_domain/addons-for-kickstarts/ca-certs/get_web_server_name.get_ipv4_domain-apache-selfsigned.crt
       - update-ca-certificates
       - touch /etc/cloud/cloud-init.disabled
       - if ls /etc/netplan/*cloud* &>/dev/null;then mv /etc/netplan/*cloud* /etc/netplan/old/;fi

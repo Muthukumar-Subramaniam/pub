@@ -5,6 +5,12 @@ v_ptr_zone_prod="$v_zone_dir/192.168.168.ms.local-reverse.db"
 v_ptr_zone_test="$v_zone_dir/10.10.10.ms.local-reverse.db"
 v_ptr_zone_dev="$v_zone_dir/172.16.16.ms.local-reverse.db"
 
+if [[ "$(id -u)" -ne 0 ]]
+then
+	echo -e "\nPlease run this script as root or using sudo ! \n"
+	exit
+fi
+
 f_main_menu() {
 	echo -e "\n<< This script modifies fqdn in ms.local domain >>\n\nNote: Both A and PTR record will be modified automatically\n"
 	
