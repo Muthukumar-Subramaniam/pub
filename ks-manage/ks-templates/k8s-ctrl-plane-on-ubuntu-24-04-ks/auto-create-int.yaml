@@ -1,5 +1,0 @@
-network:
-    version: 2
-    ethernets:
-        eth-muthuks:
-            dhcp4: true

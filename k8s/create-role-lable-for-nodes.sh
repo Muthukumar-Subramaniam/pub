@@ -1,15 +1,16 @@
 #!/bin/bash
-v_role_name=$1
-v_role_name=${v_role_name:-worker-node}
+var_worker_node_role_name="${1}"
+var_worker_node_role_name="${var_worker_node_role_name:-worker-bee}"
+var_remove_role_name="${2}"
 
-for v_node in $(kubectl get nodes | grep -v ^NAME | awk '{ print $1 }')
+for var_k8s_node in $(kubectl get nodes --no-headers | grep -i -v 'control-plane' | awk '{ print $1 }')
 do
-	if kubectl get node $v_node | awk '{ print $3 }' | grep control-plane &>/dev/null
+	if [[ "${var_remove_role_name}" == "--remove" ]]
 	then
-		continue
+		kubectl label node "${var_k8s_node}" node-role.kubernetes.io/"${var_worker_node_role_name}"-
+	else
+		kubectl label node "${var_k8s_node}" node-role.kubernetes.io/"${var_worker_node_role_name}"=true
 	fi
-
-	kubectl label node $v_node node-role.kubernetes.io/${v_role_name}=true
 done
 
 kubectl get nodes

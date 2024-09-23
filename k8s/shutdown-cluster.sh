@@ -8,6 +8,6 @@ do
 	else
 		echo -e "\nShutting down k8s host ${v_k8s_host} . . .\n"
 		ssh-keygen -R ${v_k8s_host} &>/dev/null
-		ssh -o StrictHostKeyChecking=accept-new root@${v_k8s_host} "shutdown -h now" &>/dev/null
+		ssh -o StrictHostKeyChecking=accept-new muthuks@${v_k8s_host} "sudo shutdown -h now" &>/dev/null
 	fi
 done
