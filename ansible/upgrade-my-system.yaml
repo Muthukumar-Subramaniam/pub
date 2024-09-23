@@ -6,7 +6,7 @@
   tasks:
     - name: Copying the Upgrade Script to Remote Linux Nodes
       copy:
-        src: /scripts_by_muthu/muthuks-server/upgrade-my-system.sh
+        src: /scripts_by_muthu/server/upgrade-my-system.sh
         dest: /root/upgrade-my-system.sh
         mode: 0754
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 clear
-cd /scripts_by_muthu/muthuks-server/k8s
+cd /scripts_by_muthu/server/k8s
 ./apply-nfs-setup.sh
 ./apply-cifs-setup.sh
 #./httpd/apply-my-httpd-setup.sh

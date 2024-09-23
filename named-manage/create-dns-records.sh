@@ -46,7 +46,7 @@ f_update_dns_records() {
 		#then
 		#	continue
 
-		elif [[ ${v_num_ptr} -ge 234 && ${v_num_ptr} -le 254 ]]   #<---Reserved for DHCP server from muthuks-server
+		elif [[ ${v_num_ptr} -ge 234 && ${v_num_ptr} -le 254 ]]   #<---Reserved for DHCP server from server
 		then
 			continue
 
@@ -57,7 +57,7 @@ f_update_dns_records() {
 			then
 				echo -e "\nNo more free IPs available in selected ${v_network}! "
 				#echo -e "\nNote : IPs from ${v_net_part}.213 to ${v_net_part}.233 are reserved.\n(VMware Workstation DHCP Server)" 
-				echo -e "\nNote : IPs from ${v_net_part}.234 to ${v_net_part}.254 are reserved.\n(DHCP server from muthuks-server)\n" 
+				echo -e "\nNote : IPs from ${v_net_part}.234 to ${v_net_part}.254 are reserved.\n(DHCP server from server)\n" 
 				exit
 			fi
 			break

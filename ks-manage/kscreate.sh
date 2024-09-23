@@ -1,11 +1,11 @@
 #!/bin/bash
-v_dns_record_creator='/scripts_by_muthu/muthuks-server/named-manage/create-dns-records.sh'
-v_pxe_server_updater='/scripts_by_muthu/muthuks-server/net-boot-pxe-set.sh'
-v_ks_manage_dir='/scripts_by_muthu/muthuks-server/ks-manage'
+v_dns_record_creator='/scripts_by_muthu/server/named-manage/create-dns-records.sh'
+v_pxe_server_updater='/scripts_by_muthu/server/net-boot-pxe-set.sh'
+v_ks_manage_dir='/scripts_by_muthu/server/ks-manage'
 v_kickstart_dir='/var/www/muthuks-web-server.ms.local/ks-manager-kickstarts'
 v_get_ipv4_domain='ms.local'
 v_get_ipv4_netmask='255.255.255.0'
-v_get_rhel_activation_key=$(cat /scripts_by_muthu/muthuks-server/rhel-activation-key.base64 | base64 -d)
+v_get_rhel_activation_key=$(cat /scripts_by_muthu/server/rhel-activation-key.base64 | base64 -d)
 v_get_time_of_last_update=$(date | sed  "s/ /-/g")
 
 if [[ "$(id -u)" -ne 0 ]]

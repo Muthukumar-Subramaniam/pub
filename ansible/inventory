@@ -1,5 +1,5 @@
 [server]
-muthuks-server
+server
 
 [clients]
 prod-vm1

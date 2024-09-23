@@ -1,10 +1,10 @@
 #!/bin/bash
 v_date=$(date +%d-%m-%Y_%I-%M-%p)
-v_script_log_file="/scripts_by_muthu/muthuks-server/logs-muthuks-server-cfg-bkp-script.log"
+v_script_log_file="/scripts_by_muthu/server/logs-server-cfg-bkp-script.log"
 v_cfg_dir="/root/cfg-bkp"
 v_temp_cfg_dir="/root/temp-cfg-bkp"
-v_bkp_dir="/scripts_by_muthu/muthuks-server/muthuks-server-cfg-bkp"
-v_bkp_dir_pub="/scripts_by_muthu/pub/muthuks-server/muthuks-server-cfg-bkp"
+v_bkp_dir="/scripts_by_muthu/server/server-cfg-bkp"
+v_bkp_dir_pub="/scripts_by_muthu/pub/server/server-cfg-bkp"
 
 if [[ "$(id -u)" -ne 0 ]]
 then
@@ -15,7 +15,7 @@ fi
 mkdir -p ${v_temp_cfg_dir}
 
 {
-echo -e "\nExecution of : /scripts_by_muthu/muthuks-server/muthuks-server-cfg-bkp-script.sh"
+echo -e "\nExecution of : /scripts_by_muthu/server/server-cfg-bkp-script.sh"
 echo -e "\nFrom Host : $(hostname)"
 } > ${v_script_log_file}
 
