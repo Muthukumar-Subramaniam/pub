@@ -35,11 +35,11 @@ rsync -avPh /etc/dhcp/dhcpd.conf ${v_cfg_dir}/pxe-boot-configs/etc-dhcp-dhcpd.co
 #rsync -avPh /var/lib/tftpboot/grub.cfg ${v_cfg_dir}/pxe-boot-configs/var-lib-tftpboot-grub.cfg
 #rsync -avPh /var/lib/tftpboot/grubx64.efi ${v_cfg_dir}/pxe-boot-configs/var-lib-tftpboot-grubx64.efi
 rsync -avPh /var/lib/tftpboot/pxelinux.cfg ${v_cfg_dir}/pxe-boot-configs/
-rsync -avPh --delete --exclude={{rhel,rocky,almalinux,oraclelinux}-9-4,ubuntu-24-04,opensuse-15-6,ks-manager-kickstarts} /var/www/muthuks-web-server.ms.local/ ${v_cfg_dir}/pxe-boot-configs/var-www-muthuks-web-server.ms.local/
+rsync -avPh --delete --exclude={{rhel,rocky,almalinux,oraclelinux}-9-4,ubuntu-24-04,opensuse-15-6,ks-manager-kickstarts} /var/www/server.ms.local/ ${v_cfg_dir}/pxe-boot-configs/var-www-server.ms.local/
 rsync -avPh /root/.ssh/ ${v_cfg_dir}/ssh/root-ssh/
 rsync -avPh /home/muthuks/.ssh/ ${v_cfg_dir}/ssh/muthuks-ssh/
 rsync -avPh /etc/ssh/ssh_host_* ${v_cfg_dir}/ssh/host-key-ssh/
-rsync -avPh /etc/httpd/conf.d/muthuks-web-server.ms.local.conf ${v_cfg_dir}/httpd/
+rsync -avPh /etc/httpd/conf.d/server.ms.local.conf ${v_cfg_dir}/httpd/
 rsync -avPh /etc/pki/tls/certs/{prod,test,dev}-web.ms.local-apache-selfsigned.crt ${v_cfg_dir}/httpd/
 rsync -avPh /etc/pki/tls/private/{prod,test,dev}-web.ms.local-apache-selfsigned.key ${v_cfg_dir}/httpd/  
 rsync -avPh /etc/nfs.conf ${v_cfg_dir}/nfs/

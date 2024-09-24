@@ -8,5 +8,5 @@ spec:
   accessModes:
     - ReadOnlyMany
   nfs:
-    path: /var/www/muthuks-web-server.ms.local
+    path: /var/www/server.ms.local
     server: prod-nfs
