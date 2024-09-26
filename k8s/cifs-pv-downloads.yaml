@@ -11,7 +11,7 @@ spec:
     driver: smb.csi.k8s.io
     volumeHandle: cifs-downloads
     volumeAttributes:
-      source: //prod-smb/downloads
+      source: //server.ms.local/downloads
     nodeStageSecretRef:
       name: cifs-credentials
       namespace: default

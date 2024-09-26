@@ -71,9 +71,9 @@
   </bootloader>
   <firewall t="map">
     <default_zone>public</default_zone>
-    <enable_firewall t="boolean">false</enable_firewall>
+    <enable_firewall t="boolean">true</enable_firewall>
     <log_denied_packets>off</log_denied_packets>
-    <start_firewall t="boolean">false</start_firewall>
+    <start_firewall t="boolean">true</start_firewall>
     <zones t="list">
       <zone t="map">
         <description>Unsolicited incoming network packets are rejected. Incoming packets that are related to outgoing network connections are accepted. Outgoing network connections are allowed.</description>
@@ -474,7 +474,7 @@
         <bootproto>static</bootproto>
         <ipaddr>get_ipv4_address</ipaddr>
         <name>eth0</name>
-        <prefixlen>24</prefixlen>
+        <prefixlen>get_ipv4_prefix</prefixlen>
         <startmode>auto</startmode>
       </interface>
     </interfaces>
@@ -619,6 +619,7 @@
       <package>chrony</package>
       <package>autoyast2</package>
       <package>tmux</package>
+      <package>samba-client</package>
     </packages>
     <patterns t="list">
       <pattern>apparmor</pattern>
@@ -988,16 +989,16 @@
 	#!/bin/bash
 	/usr/bin/mkdir -p /home/muthuks/.ssh /root/.ssh
 	/usr/bin/chmod 0700 /home/muthuks/.ssh /root/.ssh
-	/usr/bin/wget -O /home/muthuks/.ssh/authorized_keys http://get_web_server_name.get_ipv4_domain/addons-for-kickstarts/authorized_keys
-	/usr/bin/wget -O /root/.ssh/authorized_keys http://get_web_server_name.get_ipv4_domain/addons-for-kickstarts/authorized_keys
+	/usr/bin/wget -O /home/muthuks/.ssh/authorized_keys http://get_web_server_name.get_ipv4_domain/ks-manager-kickstarts/addons-for-kickstarts/authorized_keys
+	/usr/bin/wget -O /root/.ssh/authorized_keys http://get_web_server_name.get_ipv4_domain/ks-manager-kickstarts/addons-for-kickstarts/authorized_keys
 	/usr/bin/chmod 0600 /home/muthuks/.ssh/authorized_keys /root/.ssh/authorized_keys
 	/usr/bin/chown -R muthuks:users /home/muthuks/.ssh
-	/usr/bin/wget -P /etc/pki/trust/anchors/  http://get_web_server_name.get_ipv4_domain/addons-for-kickstarts/ca-certs/get_web_server_name.get_ipv4_domain-apache-selfsigned.crt
+	/usr/bin/wget -P /etc/pki/trust/anchors/  http://get_web_server_name.get_ipv4_domain/ks-manager-kickstarts/addons-for-kickstarts/ca-certs/get_web_server_name.get_ipv4_domain-apache-selfsigned.crt
 	/usr/sbin/update-ca-certificates
 	/usr/bin/echo -e "HISTSIZE=-1\nHISTFILESIZE=-1" | /usr/bin/tee -a /home/muthuks/.bashrc /root/.bashrc
-	var_PS1_variable_muthuks=$(/usr/bin/curl -s -L http://get_web_server_name.get_ipv4_domain/addons-for-kickstarts/PS1-env-variable-normal-user)
+	var_PS1_variable_muthuks=$(/usr/bin/curl -s -L http://get_web_server_name.get_ipv4_domain/ks-manager-kickstarts/addons-for-kickstarts/PS1-env-variable-normal-user)
 	/usr/bin/echo "${var_PS1_variable_muthuks}" >> /home/muthuks/.bashrc
-	var_PS1_variable_root=$(/usr/bin/curl -s -L http://get_web_server_name.get_ipv4_domain/addons-for-kickstarts/PS1-env-variable-root-user)
+	var_PS1_variable_root=$(/usr/bin/curl -s -L http://get_web_server_name.get_ipv4_domain/ks-manager-kickstarts/addons-for-kickstarts/PS1-env-variable-root-user)
 	/usr/bin/echo "${var_PS1_variable_root}" >> /root/.bashrc
 	/usr/bin/echo "muthuks ALL=(ALL) NOPASSWD:ALL" >/etc/sudoers.d/muthuks
 	/usr/bin/systemctl disable kdump

@@ -1,9 +1,10 @@
 #!/bin/bash
 v_zone_dir='/var/named'
 v_fw_zone="${v_zone_dir}/ms.local-forward.db"
-v_ptr_zone_prod="${v_zone_dir}/192.168.168.ms.local-reverse.db"
-v_ptr_zone_test="${v_zone_dir}/10.10.10.ms.local-reverse.db"
-v_ptr_zone_dev="${v_zone_dir}/172.16.16.ms.local-reverse.db"
+v_ptr_zone1="${v_zone_dir}/192.168.168.ms.local-reverse.db"
+v_ptr_zone2="${v_zone_dir}/192.168.169.ms.local-reverse.db"
+v_ptr_zone3="${v_zone_dir}/192.168.170.ms.local-reverse.db"
+v_ptr_zone4="${v_zone_dir}/192.168.171.ms.local-reverse.db"
 
 if [[ "$(id -u)" -ne 0 ]]
 then
@@ -11,7 +12,7 @@ then
 	exit
 fi
 
-f_main_menu() {
+fn_get_a_record() {
 	v_input_host=${1}
 	if [[ ! -z ${v_input_host} ]]
 	then
@@ -47,10 +48,11 @@ f_main_menu() {
 	fi
 }
 
-f_main_menu ${1}
+
 
 f_delete_records() {
-	v_input_delete_confirmation=${6}
+	v_ptr_zone="${1}"
+	v_input_delete_confirmation="${2}"
 	while :
 	do
 		if [[ ! ${v_input_delete_confirmation} == "-y" ]]
@@ -63,19 +65,19 @@ f_delete_records() {
 		if [[ ${v_confirmation} == "y" ]]
 		then
 
-			sed -i "/^${1} /d" ${3}
-			sed -i "/^${2}/d" ${4}
-			echo -e "\nDeleted A and PTR records of ${5} from ${3} and ${4}.\n"
+			sed -i "/^${v_capture_ptr_prefix} /d" "${v_ptr_zone}"
+			sed -i "/^${v_capture_a_record}/d" "${v_fw_zone}"
+			echo -e "\nDeleted A and PTR records of ${v_a_record} from ${v_ptr_zone} and ${v_fw_zone}.\n"
 
 			echo -e "\nUpdating Serial Numbers of zone files . ..\n"
 			
-			v_current_serial_ptr_zone=$(grep ';Serial' ${3} | cut -d ";" -f 1 | tr -d '[:space:]')
+			v_current_serial_ptr_zone=$(grep ';Serial' "${v_ptr_zone}" | cut -d ";" -f 1 | tr -d '[:space:]')
         		v_set_new_serial__ptr_zone=$(( v_current_serial_ptr_zone + 1 ))
-        		sed -i "/;Serial/s/${v_current_serial_ptr_zone}/${v_set_new_serial__ptr_zone}/g" ${3}
+        		sed -i "/;Serial/s/${v_current_serial_ptr_zone}/${v_set_new_serial__ptr_zone}/g" "${v_ptr_zone}"
 
-			v_current_serial_ptr_zone=$(grep ';Serial' ${4} | cut -d ";" -f 1 | tr -d '[:space:]')
+			v_current_serial_ptr_zone=$(grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
         		v_set_new_serial__ptr_zone=$(( v_current_serial_ptr_zone + 1 ))
-        		sed -i "/;Serial/s/${v_current_serial_ptr_zone}/${v_set_new_serial__ptr_zone}/g" ${4}
+        		sed -i "/;Serial/s/${v_current_serial_ptr_zone}/${v_set_new_serial__ptr_zone}/g" "${v_fw_zone}"
 
 
 			echo -e "\nReloading the DNS service ( named ) . . .\n"
@@ -90,7 +92,7 @@ f_delete_records() {
 				Service named is not running !\nPlease troubleshoot manually\n"
         		fi
 
-        		echo -e "\nSuccessfully deleted DNS records of \"${5}\"\n"
+        		echo -e "\nSuccessfully deleted DNS records of \"${v_a_record}\"\n"
 			break
 
 		elif [[ ${v_confirmation} == "n" ]]
@@ -106,24 +108,31 @@ f_delete_records() {
 	done
 }
 
-v_capture_a_record=$(grep "^${v_a_record} " ${v_fw_zone} ) 
+fn_get_a_record "${1}"
+
+v_capture_a_record=$(grep "^${v_a_record} " "${v_fw_zone}" ) 
 v_capture_a_record_ip=$(grep "^${v_a_record} " ${v_fw_zone} | cut -d "A" -f 2 | tr -d '[[:space:]]')
 v_capture_ptr_prefix=$(echo ${v_capture_a_record_ip} | cut -d "." -f 4 )
 
-if echo ${v_capture_a_record_ip} | grep 192.168.168 &>/dev/null
+if echo ${v_capture_a_record_ip} | grep '192.168.168' &>/dev/null
 then
-	echo -e "\nMatch found in Prod Network ( 192.168.168.0/24) with IP ${v_capture_a_record_ip} for ${v_a_record}.\n"
-	f_delete_records "${v_capture_ptr_prefix}" "${v_capture_a_record}" "${v_ptr_zone_prod}" "${v_fw_zone}" "${v_a_record}" ${2}
+	echo -e "\nMatch found with IP ${v_capture_a_record_ip} for ${v_a_record}.\n"
+	f_delete_records "${v_ptr_zone1}" "${2}"
 
-elif echo ${v_capture_a_record_ip} | grep 10.10.10 &>/dev/null
+elif echo ${v_capture_a_record_ip} | grep '192.168.169' &>/dev/null
 then
-	echo -e "\nMatch found in Test Network ( 10.10.10.0/24) with IP ${v_capture_a_record_ip} for ${v_a_record}.\n"
-	f_delete_records "${v_capture_ptr_prefix}" "${v_capture_a_record}" "${v_ptr_zone_test}" "${v_fw_zone}" "${v_a_record}" ${2}
+	echo -e "\nMatch found with IP ${v_capture_a_record_ip} for ${v_a_record}.\n"
+	f_delete_records "${v_ptr_zone2}" "${2}"
 
-elif echo ${v_capture_a_record_ip} | grep 172.16.16 &>/dev/null
+elif echo ${v_capture_a_record_ip} | grep '192.168.170' &>/dev/null
 then
-	echo -e "\nMatch found in Dev Network ( 172.16.16.0/24) with IP ${v_capture_a_record_ip} for ${v_a_record}.\n"
-	f_delete_records "${v_capture_ptr_prefix}" "${v_capture_a_record}" "${v_ptr_zone_dev}" "${v_fw_zone}" "${v_a_record}" ${2}
+	echo -e "\nMatch found with IP ${v_capture_a_record_ip} for ${v_a_record}.\n"
+	f_delete_records "${v_ptr_zone3}" "${2}"
+
+elif echo ${v_capture_a_record_ip} | grep '192.168.171' &>/dev/null
+then
+	echo -e "\nMatch found with IP ${v_capture_a_record_ip} for ${v_a_record}.\n"
+	f_delete_records "${v_ptr_zone4}" "${2}"
 fi
 
 exit

@@ -6,8 +6,8 @@ metadata:
 data:
   my-httpd-custom.conf: |
     <VirtualHost *:80>
-      ServerName prod-httpd.ms.local
-      ServerAlias prod-httpd
+      ServerName k8s-app-httpd.ms.local
+      ServerAlias k8s-app-httpd
       DocumentRoot "/usr/local/apache2/htdocs"
       <Directory "/usr/local/apache2/htdocs">
         Options Indexes MultiViews FollowSymLinks
@@ -81,7 +81,6 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 80
-  type: NodePort
-  externalIPs:
-    - 192.168.168.26
+  type: LoadBalancer
+  loadBalancerIP: 192.168.168.201
 ---

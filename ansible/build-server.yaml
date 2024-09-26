@@ -1,0 +1,38 @@
+#!/usr/bin/env ansible-playbook
+- name: Playbook to build server.ms.local
+  hosts: server.ms.local
+  vars:
+    var_cfg_bkp_dir: "/root/cfg-bkp"
+    var_server_ip: "192.168.168.3"
+    var_network_cidr: "192.168.168.0/22"
+    var_wsl_network_cidr: "172.17.0.0/16"
+  roles:
+    - name: Check and Extract the cfg-bkp
+      role: check_and_extract_server_cfg_bkp
+
+    - name: Upgrade Packages
+      role: upgrade-server
+
+    - name: Copy SSH keys
+      role: copy_ssh_keys_of_server
+
+    - name: Configure named DNS service
+      role: configure_named_service_of_server
+
+    - name: Configure httpd service ( Web Server)
+      role: configure_httpd_service_of_server
+
+    - name: Setup PXE boot environment
+      role: setup_pxe_boot_of_server
+
+    - name: Configure NFS service
+      role: configure_nfs_service_of_server
+
+    - name: Configure SMB service
+      role: configure_smb_service_of_server
+
+    - name: Configure Chronyd ( NTP ) service
+      role: configure_chronyd_service_of_server
+
+    - name: Configure command prompt and git prompt
+      role: configure_git_and_command_prompt

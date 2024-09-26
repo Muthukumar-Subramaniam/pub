@@ -1,16 +1,25 @@
 [server]
-server
+server.ms.local
+[server:vars]
+ansible_connection=local
 
-[clients]
-prod-vm1
-prod-vm2
-prod-vm3
-[clients:vars]
+[test]
+test-vm1.ms.local
+test-vm2.ms.local
+test-vm3.ms.local
+[test:vars]
+ansible_ssh_host_key_checking=no
+
+[k8s_test]
+test-k8s-cp1.ms.local
+test-k8s-w1.ms.local
+test-k8s-w2.ms.local
+[k8s_test:vars]
 ansible_ssh_host_key_checking=no
 
 [k8s]
-prod-k8s-cp1
-prod-k8s-n1
-prod-k8s-n2
+k8s-cp1.ms.local
+k8s-w1.ms.local
+k8s-w2.ms.local
 [k8s:vars]
 ansible_ssh_host_key_checking=no

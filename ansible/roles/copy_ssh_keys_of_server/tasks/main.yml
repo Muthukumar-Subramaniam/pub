@@ -1,0 +1,40 @@
+---
+# tasks file for copy_ssh_keys_of_server
+- name: Create /home/muthuks/.ssh
+  file:
+    path: /home/muthuks/.ssh
+    state: directory
+    mode: '0700'
+    owner: muthuks
+    group: muthuks
+
+- name: Create /root/.ssh
+  become: true
+  file:
+    path: /root/.ssh
+    state: directory
+    mode: '0700'
+    owner: root
+    group: root
+
+- name: Copy SSH keys to /home/muthuks/.ssh
+  ansible.posix.synchronize:
+    src: "{{ var_cfg_bkp_dir }}/ssh/muthuks-ssh"
+    dest: /home/muthuks/.ssh
+    mode: push
+
+- name: Copy SSH keys to /root/.ssh
+  become: true
+  ansible.posix.synchronize:
+    src: "{{ var_cfg_bkp_dir }}/ssh/root-ssh"
+    dest: /root/.ssh
+    mode: push
+
+- name: Copy SSH Hostkeys to /etc/ssh
+  become: true
+  ansible.posix.synchronize:
+    src: "{{ var_cfg_bkp_dir }}/ssh/host-key-ssh"
+    dest: /etc/ssh
+    mode: push
+
+##################### EOF ####################

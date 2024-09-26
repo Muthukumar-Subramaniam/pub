@@ -1,8 +1,0 @@
-- name: Playbook to Install neovim
-  hosts: all
-  become: true
-  tasks:
-  - name: Install neovim
-    package:
-      name: neovim
-      state: present

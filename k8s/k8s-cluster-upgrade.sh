@@ -9,7 +9,7 @@ kubeadm version
 kubectl version
 kubelet --version
 #Drain the Control Plan node
-kubectl drain prod-k8s-cp1  --ignore-daemonsets
+kubectl drain k8s-cp1  --ignore-daemonsets
 kubectl get nodes
 kubectl get pods --all-namespaces
 apt update
@@ -39,7 +39,7 @@ kubectl uncordon
 
 
 #Worker nodes
-v_worker_node="prod-k8s-n1"
+v_worker_node="k8s-w1"
 kubectl drain ${v_worker_node} --ignore-daemonsets
 #Once done login to worker node
 #1)Upgrade system and kubeadm:

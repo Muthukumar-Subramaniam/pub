@@ -1,5 +1,5 @@
 #!/bin/bash
-v_host_delete_file='hosts-delete-list'
+v_host_delete_file='./hosts-delete-list'
 
 if [[ "$(id -u)" -ne 0 ]]
 then

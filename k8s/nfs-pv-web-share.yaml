@@ -7,6 +7,9 @@ spec:
     storage: 1Mi  # Minimal value, you can adjust this as needed
   accessModes:
     - ReadOnlyMany
-  nfs:
-    path: /var/www/server.ms.local
-    server: prod-nfs
+  csi:
+    driver: nfs.csi.k8s.io 
+    volumeHandle: nfs-web-share
+    volumeAttributes:
+      server: server.ms.local
+      share: /var/www/server.ms.local

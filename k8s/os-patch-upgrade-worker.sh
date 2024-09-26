@@ -1,5 +1,5 @@
 #!/bin/bash
-v_worker_node="prod-k8s-n1"
+v_worker_node="k8s-w1"
 apt update
 kubectl drain ${v_worker_node} --ignore-daemonsets
 kubectl get nodes
