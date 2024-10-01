@@ -167,8 +167,8 @@ autoinstall:
     - V_count=0;for v_interface in $(ls /sys/class/net | grep -v lo);do /target/usr/bin/echo -e "[Match]\nMACAddress=$(ip link | grep $v_interface -A 1 | grep link/ether | cut -d " " -f 6)\n\n[Link]\nName=eth$V_count" >/target/etc/systemd/network/7$V_count-eth$V_count.link;V_count=$((V_count+1));done
     - mkdir -p /target/etc/netplan/old
     - if ls /target/etc/netplan/*.yaml;then mv /target/etc/netplan/*.yaml /target/etc/netplan/old;fi
-    - wget -P /target/etc/netplan/ http://get_web_server_name.get_ipv4_domain/ks-manager-kickstarts/get_hostname.get_ipv4_domain/ubuntu-24-04-ks/eth0.yaml
-    - wget -P /target/etc/netplan/ http://get_web_server_name.get_ipv4_domain/ks-manager-kickstarts/get_hostname.get_ipv4_domain/ubuntu-24-04-ks/auto-create-int.yaml
+    - wget -P /target/etc/netplan/ http://get_web_server_name.get_ipv4_domain/ks-manager-kickstarts/host-profiles/get_hostname.get_ipv4_domain/ubuntu-24-04-ks/eth0.yaml
+    - wget -P /target/etc/netplan/ http://get_web_server_name.get_ipv4_domain/ks-manager-kickstarts/host-profiles/get_hostname.get_ipv4_domain/ubuntu-24-04-ks/auto-create-int.yaml
     - V_count=1;for v_interface in $(ls /target/etc/systemd/network/ | grep -v eth0);do sed "s/eth-muthuks/eth$V_count/g" /target/etc/netplan/auto-create-int.yaml >/target/etc/netplan/eth$V_count.yaml;V_count=$((V_count+1));done
     - chmod 600 /target/etc/netplan/eth*.yaml
     - rm -rf /target/etc/netplan/auto-create-int.yaml

@@ -1,5 +1,5 @@
 #!/bin/bash
-v_zone_dir='/var/named'
+v_zone_dir='/var/named/zone-files'
 v_fw_zone="$v_zone_dir/ms.local-forward.db"
 v_ptr_zone1="${v_zone_dir}/192.168.168.ms.local-reverse.db"
 v_ptr_zone2="${v_zone_dir}/192.168.169.ms.local-reverse.db"

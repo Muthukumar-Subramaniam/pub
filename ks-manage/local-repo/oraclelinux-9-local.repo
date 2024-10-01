@@ -1,0 +1,15 @@
+[BaseOS]
+name=Oracle Linux 9 - BaseOS
+metadata_expire=-1
+gpgcheck=1
+enabled=1
+baseurl=http://get_web_server_name.get_ipv4_domain/oraclelinux-9/BaseOS/
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-oracle
+
+[AppStream]
+name=Oracle Linux 9 - AppStream
+metadata_expire=-1
+gpgcheck=1
+enabled=1
+baseurl=http://get_web_server_name.get_ipv4_domain/oraclelinux-9/AppStream/
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-oracle

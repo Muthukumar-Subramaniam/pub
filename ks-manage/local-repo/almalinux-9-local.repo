@@ -1,15 +1,15 @@
 [BaseOS]
-name=AlmaLinux 9.4 - BaseOS
+name=AlmaLinux 9 - BaseOS
 metadata_expire=-1
 gpgcheck=1
 enabled=1
-baseurl=http://get_web_server_name.get_ipv4_domain/almalinux-9-4/BaseOS/
+baseurl=http://get_web_server_name.get_ipv4_domain/almalinux-9/BaseOS/
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-AlmaLinux-9
 
 [AppStream]
-name=AlmaLinux 9.4 - AppStream
+name=AlmaLinux 9 - AppStream
 metadata_expire=-1
 gpgcheck=1
 enabled=1
-baseurl=http://get_web_server_name.get_ipv4_domain/almalinux-9-4/AppStream/
+baseurl=http://get_web_server_name.get_ipv4_domain/almalinux-9/AppStream/
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-AlmaLinux-9
