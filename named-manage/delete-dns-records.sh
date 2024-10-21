@@ -6,9 +6,9 @@ v_ptr_zone2="${v_zone_dir}/192.168.169.ms.local-reverse.db"
 v_ptr_zone3="${v_zone_dir}/192.168.170.ms.local-reverse.db"
 v_ptr_zone4="${v_zone_dir}/192.168.171.ms.local-reverse.db"
 
-if [[ "$(id -u)" -ne 0 ]]
+if ! sudo -l | grep NOPASSWD &> /dev/null
 then
-	echo -e "\nPlease run this script as root or using sudo ! \n"
+	echo -e "\nYou need sudo access without password to run this script ! \n"
 	exit
 fi
 
@@ -40,7 +40,7 @@ fn_get_a_record() {
 		done
 	fi
 
-	if ! grep "^${v_a_record} "  ${v_fw_zone}
+	if ! sudo grep "^${v_a_record} "  ${v_fw_zone}
 	then 
 		echo -e "\nA Record for \"${v_a_record}\" not found in \"${v_fw_zone}\"\n"
 		echo -e "Nothing to do ! Exiting !\n"
@@ -65,26 +65,26 @@ f_delete_records() {
 		if [[ ${v_confirmation} == "y" ]]
 		then
 
-			sed -i "/^${v_capture_ptr_prefix} /d" "${v_ptr_zone}"
-			sed -i "/^${v_capture_a_record}/d" "${v_fw_zone}"
+			sudo sed -i "/^${v_capture_ptr_prefix} /d" "${v_ptr_zone}"
+			sudo sed -i "/^${v_capture_a_record}/d" "${v_fw_zone}"
 			echo -e "\nDeleted A and PTR records of ${v_a_record} from ${v_ptr_zone} and ${v_fw_zone}.\n"
 
 			echo -e "\nUpdating Serial Numbers of zone files . ..\n"
 			
-			v_current_serial_ptr_zone=$(grep ';Serial' "${v_ptr_zone}" | cut -d ";" -f 1 | tr -d '[:space:]')
+			v_current_serial_ptr_zone=$(sudo grep ';Serial' "${v_ptr_zone}" | cut -d ";" -f 1 | tr -d '[:space:]')
         		v_set_new_serial__ptr_zone=$(( v_current_serial_ptr_zone + 1 ))
-        		sed -i "/;Serial/s/${v_current_serial_ptr_zone}/${v_set_new_serial__ptr_zone}/g" "${v_ptr_zone}"
+        		sudo sed -i "/;Serial/s/${v_current_serial_ptr_zone}/${v_set_new_serial__ptr_zone}/g" "${v_ptr_zone}"
 
-			v_current_serial_ptr_zone=$(grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
+			v_current_serial_ptr_zone=$(sudo grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
         		v_set_new_serial__ptr_zone=$(( v_current_serial_ptr_zone + 1 ))
-        		sed -i "/;Serial/s/${v_current_serial_ptr_zone}/${v_set_new_serial__ptr_zone}/g" "${v_fw_zone}"
+        		sudo sed -i "/;Serial/s/${v_current_serial_ptr_zone}/${v_set_new_serial__ptr_zone}/g" "${v_fw_zone}"
 
 
 			echo -e "\nReloading the DNS service ( named ) . . .\n"
 
-        		systemctl reload named &>/dev/null
+        		sudo systemctl reload named &>/dev/null
 
-        		if systemctl is-active named &>/dev/null;
+        		if sudo systemctl is-active named &>/dev/null;
         		then
                 		echo "Reloaded, service  named is active and running ."
         		else
@@ -110,8 +110,8 @@ f_delete_records() {
 
 fn_get_a_record "${1}"
 
-v_capture_a_record=$(grep "^${v_a_record} " "${v_fw_zone}" ) 
-v_capture_a_record_ip=$(grep "^${v_a_record} " ${v_fw_zone} | cut -d "A" -f 2 | tr -d '[[:space:]]')
+v_capture_a_record=$(sudo grep "^${v_a_record} " "${v_fw_zone}" ) 
+v_capture_a_record_ip=$(sudo grep "^${v_a_record} " ${v_fw_zone} | cut -d "A" -f 2 | tr -d '[[:space:]]')
 v_capture_ptr_prefix=$(echo ${v_capture_a_record_ip} | cut -d "." -f 4 )
 
 if echo ${v_capture_a_record_ip} | grep '192.168.168' &>/dev/null

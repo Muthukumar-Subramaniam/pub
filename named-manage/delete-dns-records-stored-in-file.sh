@@ -1,9 +1,9 @@
 #!/bin/bash
 v_host_delete_file='./hosts-delete-list'
 
-if [[ "$(id -u)" -ne 0 ]]
+if ! sudo -l | grep NOPASSWD &> /dev/null
 then
-	echo -e "\nPlease run this script as root or using sudo ! \n"
+	echo -e "\nYou need sudo access without password to run this script ! \n"
 	exit
 fi
 

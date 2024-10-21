@@ -6,9 +6,9 @@ v_ptr_zone2="${v_zone_dir}/192.168.169.ms.local-reverse.db"
 v_ptr_zone3="${v_zone_dir}/192.168.170.ms.local-reverse.db"
 v_ptr_zone4="${v_zone_dir}/192.168.171.ms.local-reverse.db"
 
-if [[ "$(id -u)" -ne 0 ]]
+if ! sudo -l | grep NOPASSWD &> /dev/null
 then
-	echo -e "\nPlease run this script as root or using sudo ! \n"
+	echo -e "\nYou need sudo access without password to run this script ! \n"
 	exit
 fi
 
@@ -28,7 +28,7 @@ fn_get_existing_record() {
   		fi
 	done
 
-	if ! grep "^$v_existing_record "  $v_fw_zone
+	if ! sudo grep "^$v_existing_record "  $v_fw_zone
         then
                 echo -e "\nA Record for \"$v_existing_record\" not found in \"$v_fw_zone\"\n"
                 echo -e "Nothing to do ! Exiting !\n"
@@ -49,7 +49,7 @@ fn_get_existing_record() {
   		fi
 	done
 
-	if grep  "^$v_modify_record "  $v_fw_zone
+	if sudo grep  "^$v_modify_record "  $v_fw_zone
 	then 
 		echo -e "\nConflict : Existing A Record found for \"$v_modify_record\" in  \"$v_fw_zone\"\n"
 		echo -e "Nothing to do ! Exiting !\n"
@@ -69,26 +69,26 @@ f_rename_records() {
 		if [[ $v_confirmation == "y" ]]
 		then
 
-			sed -i "s/${v_a_record_exist}/${v_a_record_modify}/g" ${v_fw_zone}
-			sed -i "s/${v_existing_record}.ms.local./${v_modify_record}.ms.local./g" ${v_ptr_zone}
+			sudo sed -i "s/${v_a_record_exist}/${v_a_record_modify}/g" ${v_fw_zone}
+			sudo sed -i "s/${v_existing_record}.ms.local./${v_modify_record}.ms.local./g" ${v_ptr_zone}
 			echo -e "\nRenamed A and PTR records of ${v_existing_record} in ${v_fw_zone} and ${v_ptr_zone} to ${v_modify_record}.\n"
 
 			echo -e "\nUpdating Serial Numbers of zone files . ..\n"
 			
-			v_current_serial_ptr_zone=$(grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
+			v_current_serial_ptr_zone=$(sudo grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
         		v_set_new_serial__ptr_zone=$(( v_current_serial_ptr_zone + 1 ))
-        		sed -i "/;Serial/s/$v_current_serial_ptr_zone/$v_set_new_serial__ptr_zone/g" ${v_fw_zone}
+        		sudo sed -i "/;Serial/s/$v_current_serial_ptr_zone/$v_set_new_serial__ptr_zone/g" ${v_fw_zone}
 
-			v_current_serial_ptr_zone=$(grep ';Serial' ${v_ptr_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
+			v_current_serial_ptr_zone=$(sudo grep ';Serial' ${v_ptr_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
         		v_set_new_serial__ptr_zone=$(( v_current_serial_ptr_zone + 1 ))
-        		sed -i "/;Serial/s/$v_current_serial_ptr_zone/$v_set_new_serial__ptr_zone/g" ${v_ptr_zone}
+        		sudo sed -i "/;Serial/s/$v_current_serial_ptr_zone/$v_set_new_serial__ptr_zone/g" ${v_ptr_zone}
 
 
 			echo -e "\nReloading the DNS service ( named ) . . .\n"
 
-        		systemctl reload named &>/dev/null
+        		sudo systemctl reload named &>/dev/null
 
-        		if systemctl is-active named &>/dev/null;
+        		if sudo systemctl is-active named &>/dev/null;
         		then
                 		echo "Reloaded, service  named is active and running ."
         		else
@@ -123,8 +123,8 @@ f_rename_records() {
 
 fn_get_existing_record
 
-v_a_record_exist=$(grep "^$v_existing_record " $v_fw_zone)
-v_capture_a_record_ip=$(grep "^$v_existing_record " $v_fw_zone | cut -d "A" -f 2 | tr -d '[[:space:]]')
+v_a_record_exist=$(sudo grep "^$v_existing_record " $v_fw_zone)
+v_capture_a_record_ip=$(sudo grep "^$v_existing_record " $v_fw_zone | cut -d "A" -f 2 | tr -d '[[:space:]]')
 
 v_target_length=39
 v_num_spaces=$(( v_target_length - ${#v_modify_record} ))

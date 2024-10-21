@@ -14,6 +14,12 @@ v_get_win_hostname="windows"
 v_get_rhel_activation_key=$(cat /scripts_by_muthu/server/rhel-activation-key.base64 | base64 -d)
 v_get_time_of_last_update=$(date | sed  "s/ /-/g")
 
+if ! sudo -l | grep NOPASSWD &> /dev/null
+then
+	echo -e "\nYou need sudo access without password to run this script ! \n"
+	exit
+fi
+
 while :
 do
 	# shellcheck disable=SC2162
@@ -50,7 +56,7 @@ then
 		if [[ "${v_confirmation}" == "y" ]]
 		then
 			echo -e "\nExecuting the script ${v_dns_record_creator} . . .\n"
-			sudo "${v_dns_record_creator}" "${v_get_hostname}"
+			"${v_dns_record_creator}" "${v_get_hostname}"
 
 			if host "${v_get_hostname}" &>/dev/null
 			then

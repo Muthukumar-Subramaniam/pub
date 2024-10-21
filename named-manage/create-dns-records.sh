@@ -6,16 +6,16 @@ v_ptr_zone2="${v_zone_dir}/192.168.169.ms.local-reverse.db"
 v_ptr_zone3="${v_zone_dir}/192.168.170.ms.local-reverse.db"
 v_ptr_zone4="${v_zone_dir}/192.168.171.ms.local-reverse.db"
 
-if [[ "$(id -u)" -ne 0 ]]
+if ! sudo -l | grep NOPASSWD &> /dev/null
 then
-	echo -e "\nPlease run this script as root or using sudo ! \n"
+	echo -e "\nYou need sudo access without password to run this script ! \n"
 	exit
 fi
 
 fn_check_free_ip_in_ptr_zone4() {
 	for v_num_ptr in $( seq 0 255 )  
 	do
-		if grep "^${v_num_ptr} " "${v_ptr_zone4}" &>/dev/null     #<---Checking whether the IP already exists 
+		if sudo grep "^${v_num_ptr} " "${v_ptr_zone4}" &>/dev/null     #<---Checking whether the IP already exists 
 		then
 			continue
 		else
@@ -52,7 +52,7 @@ fn_check_free_ip_in_ptr_zone4() {
 fn_check_free_ip_in_ptr_zone3() {
 	for v_num_ptr in $( seq 0 256 )  
 	do
-		if grep "^${v_num_ptr} " "${v_ptr_zone3}" &>/dev/null     #<---Checking whether the IP already exists 
+		if sudo grep "^${v_num_ptr} " "${v_ptr_zone3}" &>/dev/null     #<---Checking whether the IP already exists 
 		then
 			continue
 		else
@@ -90,7 +90,7 @@ fn_check_free_ip_in_ptr_zone3() {
 fn_check_free_ip_in_ptr_zone2() {
 	for v_num_ptr in $( seq 0 256 ) 
 	do
-		if grep "^${v_num_ptr} " "${v_ptr_zone2}" &>/dev/null     #<---Checking whether the IP already exists 
+		if sudo grep "^${v_num_ptr} " "${v_ptr_zone2}" &>/dev/null     #<---Checking whether the IP already exists 
 		then
 			continue
 		else
@@ -127,7 +127,7 @@ fn_check_free_ip_in_ptr_zone2() {
 fn_check_free_ip_in_ptr_zone1() {
 	for v_num_ptr in $( seq 2 256 )    #<---Starting first IP from 2 to ignore Gateway IP 1
 	do
-		if grep "^${v_num_ptr} " "${v_ptr_zone1}" &>/dev/null     #<---Checking whether the IP already exists 
+		if sudo grep "^${v_num_ptr} " "${v_ptr_zone1}" &>/dev/null     #<---Checking whether the IP already exists 
 		then
 			continue
 		else
@@ -163,14 +163,14 @@ f_update_dns_records() {
 
 	if [[ "${v_ptr_prv_ip}" == ';PTR-Records' ]]
 	then
-		echo "${v_add_a_record}" >> "${v_fw_zone}"
+		echo "${v_add_a_record}" | sudo tee -a "${v_fw_zone}"
 	else
-		sed -i "/${v_ptr_prv_ip}$/a \\${v_add_a_record}" "${v_fw_zone}"
+		sudo sed -i "/${v_ptr_prv_ip}$/a \\${v_add_a_record}" "${v_fw_zone}"
 	fi
 
-	v_current_serial_ptr_zone=$(grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
+	v_current_serial_ptr_zone=$(sudo grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
 	v_set_new_serial__ptr_zone=$(( v_current_serial_ptr_zone + 1 ))
-	sed -i "/;Serial/s/${v_current_serial_ptr_zone}/${v_set_new_serial__ptr_zone}/g" "${v_fw_zone}"
+	sudo sed -i "/;Serial/s/${v_current_serial_ptr_zone}/${v_set_new_serial__ptr_zone}/g" "${v_fw_zone}"
 
 	##################  End of  A Record Updating Section ############################
 
@@ -200,41 +200,41 @@ f_update_dns_records() {
 		v_add_ptr_record=$(echo "${v_ptr_ip}   IN PTR ${v_a_record}.ms.local.")
 		if [[ "${v_ptr_prev}" == ';PTR-Records' ]]
 		then
-			echo "${v_add_ptr_record}" >> "${v_ptr_zone}"
+			echo "${v_add_ptr_record}" | sudo tee -a "${v_ptr_zone}"
 		else
-			sed -i "/^${v_ptr_prev} /a\\${v_add_ptr_record}" "${v_ptr_zone}"
+			sudo sed -i "/^${v_ptr_prev} /a\\${v_add_ptr_record}" "${v_ptr_zone}"
 		fi
 	elif [[ "${v_digits}" -eq 2 ]]
 	then
 		v_add_ptr_record=$(echo "${v_ptr_ip}  IN PTR ${v_a_record}.ms.local.")
 		if [[ "${v_ptr_prev}" == ';PTR-Records' ]]
 		then
-			echo "${v_add_ptr_record}" >> "${v_ptr_zone}"
+			echo "${v_add_ptr_record}" | sudo tee "${v_ptr_zone}"
 		else
-			sed -i "/^${v_ptr_prev} /a\\${v_add_ptr_record}" "${v_ptr_zone}"
+			sudo sed -i "/^${v_ptr_prev} /a\\${v_add_ptr_record}" "${v_ptr_zone}"
 		fi
 	elif [[ "${v_digits}" -eq 3 ]]
 	then
 		v_add_ptr_record=$(echo "${v_ptr_ip} IN PTR ${v_a_record}.ms.local.")
 		if [[ "${v_ptr_prev}" == ';PTR-Records' ]]
 		then
-			echo "${v_add_ptr_record}" >> "${v_ptr_zone}"
+			echo "${v_add_ptr_record}" | sudo tee "${v_ptr_zone}"
 		else
-			sed -i "/^${v_ptr_prev} /a\\${v_add_ptr_record}" "${v_ptr_zone}"
+			sudo sed -i "/^${v_ptr_prev} /a\\${v_add_ptr_record}" "${v_ptr_zone}"
 		fi
 	fi
 
-	v_current_serial_ptr_zone=$(grep ';Serial' "${v_ptr_zone}" | cut -d ";" -f 1 | tr -d '[:space:]')
+	v_current_serial_ptr_zone=$(sudo grep ';Serial' "${v_ptr_zone}" | cut -d ";" -f 1 | tr -d '[:space:]')
 	v_set_new_serial__ptr_zone=$(( v_current_serial_ptr_zone + 1 ))
-	sed -i "/;Serial/s/${v_current_serial_ptr_zone}/${v_set_new_serial__ptr_zone}/g" "${v_ptr_zone}"
+	sudo sed -i "/;Serial/s/${v_current_serial_ptr_zone}/${v_set_new_serial__ptr_zone}/g" "${v_ptr_zone}"
 
 	############# End of PTR Record Updating Section #######################
 
 	echo -e "\nReloading the DNS service ( named ) . . .\n"
 
-	systemctl reload named &>/dev/null
+	sudo systemctl reload named &>/dev/null
 
-	if systemctl is-active named &>/dev/null;
+	if sudo systemctl is-active named &>/dev/null;
 	then 
 		echo "Reloaded, service  named is active and running ."
 	else
@@ -284,7 +284,7 @@ f_get_a_record() {
 		done
 	fi
 
-	if grep -w "${v_a_record} "  ${v_fw_zone}
+	if sudo grep -w "${v_a_record} "  ${v_fw_zone}
 	then 
 		echo -e "\nA Record for \"${v_a_record}\" already exists in \"${v_fw_zone}\"\n"
 		exit
