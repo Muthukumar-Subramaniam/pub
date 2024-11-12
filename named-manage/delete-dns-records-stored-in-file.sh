@@ -1,4 +1,6 @@
 #!/bin/bash
+var_named_manage_dir='/scripts_by_muthu/server/named-manage'
+var_delete_record="${var_named_manage_dir}/delete-dns-records.sh"
 v_host_delete_file='./hosts-delete-list'
 
 if ! sudo -l | grep NOPASSWD &> /dev/null
@@ -44,9 +46,8 @@ done
 
 for v_host_to_delete in $(cat ${v_host_delete_file}) 
 do
-
-echo -e "\nRunning delete-dns-records.sh for ${v_host_to_delete} . . .\n"
-./delete-dns-records.sh ${v_host_to_delete} -y
+	echo -e "\nRunning delete-dns-records.sh for ${v_host_to_delete} . . .\n"
+ 	"${var_delete_record}" "${v_host_to_delete}" -y
 clear
 
 done

@@ -1,4 +1,6 @@
 #!/bin/bash
+var_named_manage_dir='/scripts_by_muthu/server/named-manage'
+var_create_record="${var_named_manage_dir}/create-dns-records.sh"
 v_host_create_file='./hosts-create-list'
 
 if ! sudo -l | grep NOPASSWD &> /dev/null
@@ -43,10 +45,8 @@ done
 
 for v_host_to_create in $(cat ${v_host_create_file}) 
 do
-
-./create-dns-records.sh ${v_host_to_create}
-clear
-
+	"${var_create_record}" "${v_host_to_create}"
+	clear
 done
 
 echo -e "\nScript $(basename $0) completed execution !"

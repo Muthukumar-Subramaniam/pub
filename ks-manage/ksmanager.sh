@@ -25,10 +25,11 @@ do
 	# shellcheck disable=SC2162
 	if [ -z "${1}" ]
 	then
-		echo "FYI:"
-		echo "	1. Please use only letters, numbers, and hyphens."
-		echo "	2. Please do not start with a number."
-		echo -e "	3. Please do not append the domain name ${v_get_ipv4_domain} \n"
+		echo -e "Create Kickstart Host Profiles for PXE-boot in \"${v_get_ipv4_domain}\" domain,\n"
+		echo "Points to Keep in Mind While Entering the Hostname:"
+		echo " * Please use only letters, numbers, and hyphens."
+		echo " * Please do not start with a number."
+		echo -e " * Please do not append the domain name \"${v_get_ipv4_domain}\" \n"
 		read -r -p "Please Enter the Hostname for which Kickstarts are required : " v_get_hostname
 	else
 		v_get_hostname="${1}"
