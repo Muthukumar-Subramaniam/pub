@@ -125,9 +125,9 @@ fn_get_mac_address() {
 
 echo -e "\nLooking up MAC Address for the host ${v_get_hostname} from mac-address-cache . . ."
 
-if grep "${v_get_hostname}" "${v_ks_manage_dir}"/mac-address-cache &>>/dev/null
+if grep ^"${v_get_hostname} " "${v_ks_manage_dir}"/mac-address-cache &>>/dev/null
 then
-	var_get_mac_address=$(grep "${v_get_hostname}" "${v_ks_manage_dir}"/mac-address-cache | cut -d " " -f 2 )
+	var_get_mac_address=$(grep ^"${v_get_hostname} " "${v_ks_manage_dir}"/mac-address-cache | cut -d " " -f 2 )
 	echo -e "\nMAC Address ${var_get_mac_address} found for ${v_get_hostname} in mac-address-cache! \n" 
 	while :
 	do
