@@ -48,6 +48,4 @@ for v_host_to_delete in $(cat ${v_host_delete_file})
 do
 	echo -e "\nRunning delete-dns-records.sh for ${v_host_to_delete} . . .\n"
  	"${var_delete_record}" "${v_host_to_delete}" -y
-clear
-
 done

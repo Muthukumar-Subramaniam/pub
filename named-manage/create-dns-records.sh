@@ -255,31 +255,30 @@ f_update_dns_records() {
 
 	
 f_get_a_record() {
-	echo -e "\n<< This script provitions fqdn from ms.local domain >>\n\nNote: A and PTR record updates are done automatically\n"
 	v_input_host="${1}"
 	if [[ ! -z ${v_input_host} ]]
 	then
                 v_a_record=${1}
 		if [[ ! ${v_a_record} =~ ^[[:alpha:]]([-[:alnum:]]*)$ ]]
 		then
-                        echo -e "1st command line parameter provided is invalid!\n"
-			echo -e "Please use only letters, numbers, and hyphens.\n (cannot start with a number).\n"
+                        echo -e "Provided input hostname \"${v_a_record}\" is invalid!\n"
+			echo -e "Please use only letters, numbers, and hyphens.\n (cannot start with a number or hyphen).\n"
 			exit
 		fi
 
 	else
 		while :
 		do
-			echo -e "\nPlease use only letters, numbers, and hyphens.\n (Please do not start with a number)."
+			echo -e "\nPlease use only letters, numbers, and hyphens.\n (Please do not start with a number or hyphen)."
 			echo -e "No need to append the domain name ms.local\n"
 
-			read -p "Please Enter the required hostname : " v_a_record
+			read -p "Please Enter the name of host record to create : " v_a_record
 
 			if [[ ${v_a_record} =~ ^[[:alpha:]]([-[:alnum:]]*)$ ]]
 	       		then
     				break
   			else
-    				echo -e "Invalid name!\nPlease use only letters, numbers, and hyphens.\n (cannot start with a number).\n"
+    				echo -e "Invalid name!\nPlease use only letters, numbers, and hyphens.\n (cannot start with a number or hyphen).\n"
   			fi
 		done
 	fi

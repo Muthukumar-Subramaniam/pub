@@ -13,20 +13,30 @@ then
 fi
 
 fn_get_existing_record() {
-	echo -e "\n<< This script modifies fqdn in ms.local domain >>\n\nNote: Both A and PTR record will be modified automatically\n"
-	
-	while :
-	do
-		echo -e "\nPlease use only letters, numbers, and hyphens.\n (Please do not start with a number)."
-		echo -e "No need to append the domain name ms.local\n"
-		read -p "Please Enter the hostname to be modified : " v_existing_record
-		if [[ $v_existing_record =~ ^[[:alpha:]]([-[:alnum:]]*)$ ]]
-	       	then
-    			break
-  		else
-    			echo -e "Invalid name!\nPlease use only letters, numbers, and hyphens.\n (cannot start with a number).\n"
-  		fi
-	done
+	v_input_host="${1}"
+	if [[ ! -z ${v_input_host} ]]
+	then
+                v_existing_record=${1}
+		if [[ ! ${v_existing_record} =~ ^[[:alpha:]]([-[:alnum:]]*)$ ]]
+		then
+                        echo -e "provided input hostname \"${v_existing_record}\" is invalid!\n"
+			echo -e "Please use only letters, numbers, and hyphens.\n (cannot start with a number or hyphen).\n"
+			exit
+		fi
+	else
+		while :
+		do
+			echo -e "\nPlease use only letters, numbers, and hyphens.\n (Please do not start with a number)."
+			echo -e "No need to append the domain name ms.local\n"
+			read -p "Please Enter the hostname to be modified : " v_existing_record
+			if [[ $v_existing_record =~ ^[[:alpha:]]([-[:alnum:]]*)$ ]]
+	       		then
+    				break
+  			else
+    				echo -e "Invalid name!\nPlease use only letters, numbers, and hyphens.\n (cannot start with a number or hyphen).\n"
+  			fi
+		done
+	fi
 
 	if ! sudo grep "^$v_existing_record "  $v_fw_zone
         then
@@ -38,14 +48,14 @@ fn_get_existing_record() {
 	
 	while :
 	do
-		echo -e "\nPlease use only letters, numbers, and hyphens.\n (Please do not start with a number)."
+		echo -e "\nPlease use only letters, numbers, and hyphens.\n (Please do not start with a number or hyphen)."
 		echo -e "No need to append the domain name ms.local\n"
 		read -p "Please Enter the hostname to replace \"$v_existing_record\" : " v_modify_record
 		if [[ $v_modify_record =~ ^[[:alpha:]]([-[:alnum:]]*)$ ]]
 	       	then
     			break
   		else
-    			echo -e "Invalid name!\nPlease use only letters, numbers, and hyphens.\n (cannot start with a number).\n"
+    			echo -e "Invalid name!\nPlease use only letters, numbers, and hyphens.\n (cannot start with a number or hyphen).\n"
   		fi
 	done
 
@@ -121,7 +131,7 @@ f_rename_records() {
 	done
 }
 
-fn_get_existing_record
+fn_get_existing_record "${1}"
 
 v_a_record_exist=$(sudo grep "^$v_existing_record " $v_fw_zone)
 v_capture_a_record_ip=$(sudo grep "^$v_existing_record " $v_fw_zone | cut -d "A" -f 2 | tr -d '[[:space:]]')

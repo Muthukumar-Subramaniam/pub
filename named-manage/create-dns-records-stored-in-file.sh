@@ -46,7 +46,6 @@ done
 for v_host_to_create in $(cat ${v_host_create_file}) 
 do
 	"${var_create_record}" "${v_host_to_create}"
-	clear
 done
 
 echo -e "\nScript $(basename $0) completed execution !"

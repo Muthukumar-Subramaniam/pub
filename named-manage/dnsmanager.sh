@@ -14,12 +14,12 @@ fi
 
 fn_main_menu() {
 cat << EOF
-Manage DNS Records with named,
-1) Create a DNS Record
-2) Create Multiple DNS Records
-3) Delete a DNS Record
-4) Delete Multiple DNS Records
-5) Modify an existing DNS Record
+Manage DNS host records with ms.local domain,
+1) Create a DNS host record
+2) Delete a DNS host record
+3) Modify an existing DNS host record
+4) Create multiple DNS host records provided in a file named hosts-create-list
+5) Delete multiple DNS host records provided in a file named hosts-delete-list
 q) Quit without any changes
 
 EOF
@@ -31,16 +31,16 @@ case ${var_script} in
 		"${var_create_record}"
 		;;
 	2)
-		"${var_create_multiple_records}"
-		;;
-	3)
 		"${var_delete_record}"
 		;;
+	3)
+		"${var_modify_record}"
+		;;
 	4)
-		"${var_delelte_multiple_records}"
+		"${var_create_multiple_records}"
 		;;
 	5)
-		"${var_modify_record}"
+		"${var_delelte_multiple_records}"
 		;;
 	q)
 		exit
@@ -53,4 +53,43 @@ esac
 
 }
 
-fn_main_menu
+if [ ! -z "${1}" ]
+then
+	case "${1}" in
+		-c)
+			"${var_create_record}" "${2}"
+			;;
+		-d)
+			"${var_delete_record}" "${2}"
+			;;
+		-m)
+			"${var_modify_record}" "${2}"
+			;;
+		-mc)
+			"${var_create_multiple_records}"
+			;;
+		-md)
+			"${var_delelte_multiple_records}"
+			;;
+		*)
+			if [[ ! "${1}" =~ ^-h|--help$ ]]
+			then
+				echo "Invalid Option \"${1}\"!"
+			fi
+			cat << EOF
+Usage: dnsmanager [ option ] [ DNS host record ]
+Use one of the following Options :
+	-c 	To create a DNS host record
+	-d 	To delete a DNS host record
+	-m 	To modify an existing DNS host record
+	-mc 	To create multiple DNS host records provided in a file named hosts-create-list  
+	-md	To delete multiple DNS host records provided in a file named hosts-delete-list
+[ Or ]
+Run dnsmanager utility without any arguements to get menu driven actions.
+
+EOF
+			;;
+	esac
+else
+	fn_main_menu
+fi

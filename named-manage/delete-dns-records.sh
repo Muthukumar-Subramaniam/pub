@@ -19,28 +19,27 @@ fn_get_a_record() {
 		v_a_record=${v_input_host}
 		if [[ ! ${v_a_record} =~ ^[[:alpha:]]([-[:alnum:]]*)$ ]]
                 then
-			echo -e "1st command line parameter \"${v_a_record}\" provided is invalid!\n"
-                        echo -e "Please use only letters, numbers, and hyphens.\n (cannot start with a number).\n"
+                        echo -e "Provided input hostname \"${v_a_record}\" is invalid!\n"
+                        echo -e "Please use only letters, numbers, and hyphens.\n (cannot start with a number or hyphen).\n"
 			exit
                 fi
 
 	else
-		echo -e "\n<< This script deletes fqdn from ms.local domain >>\n\nNote: Both A and PTR record will be deleted automatically\n"
 		while :
 		do
-			echo -e "\nPlease use only letters, numbers, and hyphens.\n (Please do not start with a number)."
+			echo -e "\nPlease use only letters, numbers, and hyphens.\n (Please do not start with a number or hyphen)."
 			echo -e "No need to append the domain name ms.local\n"
 			read -p "Please Enter the hostname to be deleted : " v_a_record
 			if [[ ${v_a_record} =~ ^[[:alpha:]]([-[:alnum:]]*)$ ]]
 	       		then
     				break
   			else
-    				echo -e "Invalid name!\nPlease use only letters, numbers, and hyphens.\n (cannot start with a number).\n"
+    				echo -e "Invalid name!\nPlease use only letters, numbers, and hyphens.\n (cannot start with a number or hyphen).\n"
   			fi
 		done
 	fi
 
-	if ! sudo grep "^${v_a_record} "  ${v_fw_zone}
+	if ! sudo grep "^${v_a_record} "  ${v_fw_zone} &>/dev/null
 	then 
 		echo -e "\nA Record for \"${v_a_record}\" not found in \"${v_fw_zone}\"\n"
 		echo -e "Nothing to do ! Exiting !\n"
@@ -57,7 +56,7 @@ f_delete_records() {
 	do
 		if [[ ! ${v_input_delete_confirmation} == "-y" ]]
 		then
-			read -p "Please confirm deletion of records (y/n) :" v_confirmation
+			read -p "Please confirm deletion of records (y/n) : " v_confirmation
 		else
 			v_confirmation='y'
 		fi
