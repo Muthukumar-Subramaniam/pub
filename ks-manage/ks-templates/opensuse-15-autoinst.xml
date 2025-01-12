@@ -1003,6 +1003,7 @@
 	/usr/bin/echo "muthuks ALL=(ALL) NOPASSWD:ALL" >/etc/sudoers.d/muthuks
 	/usr/bin/systemctl disable kdump
 	for v_repo_file in $(ls /etc/zypp/repos.d);do if grep get_web_server_name.get_ipv4_domain /etc/zypp/repos.d/$v_repo_file;then rm -rf /etc/zypp/repos.d/$v_repo_file;fi;done
+	/usr/bin/echo 'kernel.hostname=get_hostname.get_ipv4_domain' > /etc/sysctl.d/hostname.conf 
         ]]></source>
       </script>
     </post-scripts>
