@@ -284,7 +284,7 @@ f_get_a_record() {
 		done
 	fi
 
-	if sudo grep -w "${v_a_record} "  ${v_fw_zone}
+	if sudo grep -w "^${v_a_record} "  ${v_fw_zone}
 	then 
 		echo -e "\nA Record for \"${v_a_record}\" already exists in \"${v_fw_zone}\"\n"
 		exit
