@@ -1,12 +1,21 @@
 #!/bin/bash
 var_named_manage_dir='/scripts_by_muthu/server/named-manage'
 var_delete_record="${var_named_manage_dir}/delete-dns-records.sh"
-v_host_delete_file='./hosts-delete-list'
+var_zone_dir='/var/named/zone-files'
+var_fw_zone="${var_zone_dir}/ms.local-forward.db"
 
 if ! sudo -l | grep NOPASSWD &> /dev/null
 then
 	echo -e "\nYou need sudo access without password to run this script ! \n"
 	exit
+fi
+
+if [ -z "${1}" ]
+then
+	echo
+	read -p "Name of the file containing the list of host records to delete : " v_host_delete_file
+else
+	v_host_delete_file="${1}"
 fi
 
 if [[ ! -f ${v_host_delete_file} ]];then echo -e "\nFile \"${v_host_delete_file}\" doesn't exist!\n";exit;fi 
@@ -43,9 +52,45 @@ do
         fi
 done
 
+> /tmp/temp-hold-host-records-deleted-by-dnsmanager
 
 for v_host_to_delete in $(cat ${v_host_delete_file}) 
 do
+	v_current_serial_fw_zone=$(sudo grep ';Serial' ${var_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
+
 	echo -e "\nRunning delete-dns-records.sh for ${v_host_to_delete} . . .\n"
  	"${var_delete_record}" "${v_host_to_delete}" -y
+
+	"${var_delete_record}" "${v_host_to_delete}"
+
+	v_serial_fw_zone_post_execution=$(sudo grep ';Serial' ${var_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
+
+	if [[ "${v_current_serial_fw_zone}" -ne "${v_serial_fw_zone_post_execution}" ]]
+	then
+		echo "${v_host_to_delete} Deleted" >>/tmp/temp-hold-host-records-deleted-by-dnsmanager
+	else
+		echo "${v_host_to_delete} Doesn't-Exist" >>/tmp/temp-hold-host-records-deleted-by-dnsmanager
+	fi
 done
+
+echo -e "\nScript $(basename $0) completed execution !"
+echo -e "\nPlease find the below details of the records :\n"
+tput bold && tput setaf 6 && \
+        echo -e "Action-Taken   FQDN" \
+        && tput sgr0
+
+for v_host in $(cat ${v_host_delete_file})
+do
+	v_host_record_status=$(grep -w "^${v_host}" /tmp/temp-hold-host-records-deleted-by-dnsmanager | cut -d " " -f 2)
+	if echo "${v_host_record_status}" | grep Deleted &>/dev/null
+	then
+		v_host_record_status="Deleted      "
+	fi
+        v_fqdn="${v_host}.ms.local"
+        echo "${v_host_record_status}  ${v_fqdn}"
+done
+echo
+
+rm -f /tmp/temp-hold-host-records-deleted-by-dnsmanager
+
+exit

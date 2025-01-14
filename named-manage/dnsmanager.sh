@@ -3,7 +3,7 @@ var_named_manage_dir='/scripts_by_muthu/server/named-manage'
 var_create_record="${var_named_manage_dir}/create-dns-records.sh"
 var_create_multiple_records="${var_named_manage_dir}/create-dns-records-stored-in-file.sh"
 var_delete_record="${var_named_manage_dir}/delete-dns-records.sh"
-var_delelte_multiple_records="${var_named_manage_dir}/delete-dns-records-stored-in-file.sh"
+var_delete_multiple_records="${var_named_manage_dir}/delete-dns-records-stored-in-file.sh"
 var_modify_record="${var_named_manage_dir}/modify-dns-record.sh"
 
 if ! sudo -l | grep NOPASSWD &> /dev/null
@@ -18,8 +18,8 @@ Manage DNS host records with ms.local domain,
 1) Create a DNS host record
 2) Delete a DNS host record
 3) Modify an existing DNS host record
-4) Create multiple DNS host records provided in a file named hosts-create-list
-5) Delete multiple DNS host records provided in a file named hosts-delete-list
+4) Create multiple DNS host records provided in a file
+5) Delete multiple DNS host records provided in a file
 q) Quit without any changes
 
 EOF
@@ -40,7 +40,7 @@ case ${var_script} in
 		"${var_create_multiple_records}"
 		;;
 	5)
-		"${var_delelte_multiple_records}"
+		"${var_delete_multiple_records}"
 		;;
 	q)
 		exit
@@ -65,11 +65,11 @@ then
 		-m)
 			"${var_modify_record}" "${2}"
 			;;
-		-mc)
-			"${var_create_multiple_records}"
+		-cf)
+			"${var_create_multiple_records}" "${2}"
 			;;
-		-md)
-			"${var_delelte_multiple_records}"
+		-df)
+			"${var_delete_multiple_records}" "${2}"
 			;;
 		*)
 			if [[ ! "${1}" =~ ^-h|--help$ ]]
@@ -82,8 +82,8 @@ Use one of the following Options :
 	-c 	To create a DNS host record
 	-d 	To delete a DNS host record
 	-m 	To modify an existing DNS host record
-	-mc 	To create multiple DNS host records provided in a file named hosts-create-list  
-	-md	To delete multiple DNS host records provided in a file named hosts-delete-list
+	-cf 	To create multiple DNS host records provided in a file 
+	-df	To delete multiple DNS host records provided in a file
 [ Or ]
 Run dnsmanager utility without any arguements to get menu driven actions.
 
