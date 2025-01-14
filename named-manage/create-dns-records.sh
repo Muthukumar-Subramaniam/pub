@@ -22,7 +22,7 @@ fn_check_free_ip_in_ptr_zone4() {
 			if [[ "${v_num_ptr}" -eq 255 ]]                        #<--Checking if max limit exceeded in zone4
 			then
 				echo "\nNo more IPs available in 192.168.168.0/22 Network of ms.local domain! \n"
-				exit
+				exit 255
 			else
 				v_ptr_ip="${v_num_ptr}"
 
@@ -263,7 +263,7 @@ f_get_a_record() {
 		then
                         echo -e "Provided input hostname \"${v_a_record}\" is invalid!\n"
 			echo -e "Please use only letters, numbers, and hyphens.\n (cannot start with a number or hyphen).\n"
-			exit
+			exit 9
 		fi
 
 	else
@@ -286,7 +286,7 @@ f_get_a_record() {
 	if sudo grep -w "^${v_a_record} "  ${v_fw_zone}
 	then 
 		echo -e "\nA Record for \"${v_a_record}\" already exists in \"${v_fw_zone}\"\n"
-		exit
+		exit 8
 	fi
 }
 	

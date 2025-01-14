@@ -35,7 +35,7 @@ do
 	cat ${v_host_create_file}
 	echo -e "\nNote : If a record already exists, will be ignored .\n"
 
-	read -p "Do you want to proceed? (y/n) :" v_confirmation
+	read -p "Do you want to proceed? (y/n) : " v_confirmation
 
 	if [[ ${v_confirmation} == "y" ]]
 	then
@@ -59,32 +59,67 @@ do
 
 	"${var_create_record}" "${v_host_to_create}"
 
-	v_serial_fw_zone_post_execution=$(sudo grep ';Serial' ${var_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
+	var_exit_status=$(echo $?)
 
-	if [[ "${v_current_serial_fw_zone}" -ne "${v_serial_fw_zone_post_execution}" ]]
+	if [[ ${var_exit_status} -eq 9 ]]
 	then
-		echo "${v_host_to_create} Created" >>/tmp/temp-hold-host-records-created-by-dnsmanager
-	else
+		echo "${v_host_to_create} Invalid-Host" >>/tmp/temp-hold-host-records-created-by-dnsmanager
+
+	elif [[ ${var_exit_status} -eq 8 ]]
+	then
 		echo "${v_host_to_create} Already-Exists" >>/tmp/temp-hold-host-records-created-by-dnsmanager
+
+	elif [[ ${var_exit_status} -eq 255 ]]
+	then
+		echo "${v_host_to_create} IP-Exhausted" >>/tmp/temp-hold-host-records-created-by-dnsmanager
+	else
+		v_serial_fw_zone_post_execution=$(sudo grep ';Serial' ${var_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
+
+		if [[ "${v_current_serial_fw_zone}" -ne "${v_serial_fw_zone_post_execution}" ]]
+		then
+			echo "${v_host_to_create} Created" >>/tmp/temp-hold-host-records-created-by-dnsmanager
+		else
+			echo "${v_host_to_create} Failed-to-Create" >>/tmp/temp-hold-host-records-created-by-dnsmanager
+		fi
 	fi
 done
 
 echo -e "\nScript $(basename $0) completed execution !"
 echo -e "\nPlease find the below details of the records :\n"
 tput bold && tput setaf 6 && \
-	echo -e "Action-Taken    FQDN ( IPv4-Address )" \
+	echo -e "Action-Taken     FQDN ( IPv4-Address )" \
         && tput sgr0
 
 for v_host in $(cat ${v_host_create_file})
 do
 	v_host_record_status=$(grep -w "^${v_host}" /tmp/temp-hold-host-records-created-by-dnsmanager | cut -d " " -f 2)
+
 	if echo "${v_host_record_status}" | grep Created &>/dev/null
 	then
-		v_host_record_status="Created       "
+		v_host_record_status="Created         "
+	
+	elif echo "${v_host_record_status}" | grep Invalid-Host &>/dev/null
+	then
+		v_host_record_status="Invalid-Host    "
+
+	elif echo "${v_host_record_status}" | grep IP-Exhausted &>/dev/null
+	then
+		v_host_record_status="IP-Exhausted    "
+
+	elif echo "${v_host_record_status}" | grep Already-Exists &>/dev/null
+	then
+		v_host_record_status="Already-Exists  "
+
+	elif echo "${v_host_record_status}" | grep Failed-to-Create &>/dev/null
+	then
+		v_host_record_status="Failed-to-Create"
 	fi
+
         v_fqdn="${v_host}.ms.local"
+
         v_ip_address=$(nslookup ${v_fqdn} | grep ^Name -A 1 | grep Address | cut -d ":" -f 2 | tr -d '[[:space:]]')
-	echo "${v_host_record_status}  ${v_fqdn} ( ${v_ip_address} )"
+
+	echo "${v_host_record_status} ${v_fqdn} ( ${v_ip_address} )"
 done
 echo
 

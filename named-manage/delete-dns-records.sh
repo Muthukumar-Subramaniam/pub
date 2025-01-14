@@ -21,7 +21,7 @@ fn_get_a_record() {
                 then
                         echo -e "Provided input hostname \"${v_a_record}\" is invalid!\n"
                         echo -e "Please use only letters, numbers, and hyphens.\n (cannot start with a number or hyphen).\n"
-			exit
+			exit 9
                 fi
 
 	else
@@ -43,7 +43,7 @@ fn_get_a_record() {
 	then 
 		echo -e "\nA Record for \"${v_a_record}\" not found in \"${v_fw_zone}\"\n"
 		echo -e "Nothing to do ! Exiting !\n"
-		exit
+		exit 8
 	fi
 }
 
