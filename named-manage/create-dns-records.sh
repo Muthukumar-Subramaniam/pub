@@ -12,148 +12,38 @@ then
 	exit
 fi
 
-fn_check_free_ip_in_ptr_zone4() {
+fn_check_free_ip() {
 
-#	v_existing_ips_ptr_zone4=$(sudo sed -n 's/^\([0-9]\+\).*/\1/p' "${v_ptr_zone4}")
+	local v_file_ptr_zone="${1}"
+	local v_start_ip="${2}"
+	local v_max_ip="${3}"
+	local v_subnet="${4}"
+	local v_capture_list_of_ips=$(sudo sed -n 's/^\([0-9]\+\).*/\1/p' "${v_file_ptr_zone}")
+	declare -A v_existing_ips
 
-	while IFS= read -r ip
-	do
-        	v_existing_ips_ptr_zone4["$ip"]=1
-	done < <(sudo sed -n 's/^\([0-9]\+\).*/\1/p' "${v_ptr_zone4}")
-
-	for ((v_num_ptr = 0; v_num_ptr <= 254; v_num_ptr++))
-	do
-#		if ! printf '%s\n' "${v_existing_ips_ptr_zone4}" | grep -qw "${v_num_ptr}"
-		if [[ -z "${v_existing_ips_ptr_zone4[$v_num_ptr]}" ]]
-		then
-			v_ptr_ip="${v_num_ptr}"
-
-			if [[ "${v_ptr_ip}" -eq 0 ]]
-			then
-				v_ptr_prev=';PTR-Records'
-			else
-				v_ptr_prev=$(( v_num_ptr - 1 ))                   #<--Capturing existing previous IP 
-			fi
-
-			if [[ "${v_ptr_prev}" == ';PTR-Records' ]]
-			then
-				v_ptr_prv_ip=';PTR-Records'
-			else
-				v_ptr_prv_ip="192.168.171.${v_ptr_prev}"
-			fi
-
-			v_ptr_current_ip="192.168.171.${v_ptr_ip}"
-			v_ptr_zone="${v_ptr_zone4}"
-
-			return 0
-		fi
-	done
-
-	return 1
-}	
-
-
-fn_check_free_ip_in_ptr_zone3() {
-
-#	v_existing_ips_ptr_zone3=$(sudo sed -n 's/^\([0-9]\+\).*/\1/p' "${v_ptr_zone3}")
+	if [ -z "${v_capture_list_of_ips}" ]
+	then
+		v_host_part_of_current_ip="${v_start_ip}"
+		v_previous_ip=';PTR-Records'
+		v_current_ip="${v_subnet}.${v_host_part_of_current_ip}"
+		v_ptr_zone="${v_file_ptr_zone}"
+		return 0
+	fi
 
 	while IFS= read -r ip
 	do
-        	v_existing_ips_ptr_zone3["$ip"]=1
-	done < <(sudo sed -n 's/^\([0-9]\+\).*/\1/p' "${v_ptr_zone3}")
+        	v_existing_ips["$ip"]=1
+	done <<< "${v_capture_list_of_ips}"
 
-	for ((v_num_ptr = 0; v_num_ptr <= 255; v_num_ptr++))
+	for ((v_num_ptr = ${v_start_ip}; v_num_ptr <= ${v_max_ip}; v_num_ptr++))
 	do
-	#	if ! printf '%s\n' "${v_existing_ips_ptr_zone3}" | grep -qw "${v_num_ptr}"
-		if [[ -z "${v_existing_ips_ptr_zone3[$v_num_ptr]}" ]]
+		if [[ -z "${v_existing_ips[$v_num_ptr]+isset}" ]]
 		then
-			v_ptr_ip="${v_num_ptr}"
-
-			if [[ "${v_ptr_ip}" -eq 0 ]]
-			then
-				v_ptr_prev=';PTR-Records'
-			else
-				v_ptr_prev=$(( v_num_ptr - 1 ))                   #<--Capturing existing previous IP 
-			fi
-
-			if [[ "${v_ptr_prev}" == ';PTR-Records' ]]
-			then
-				v_ptr_prv_ip=';PTR-Records'
-			else
-				v_ptr_prv_ip="192.168.170.${v_ptr_prev}"
-			fi
-
-			v_ptr_current_ip="192.168.170.${v_ptr_ip}"
-			v_ptr_zone="${v_ptr_zone3}"
-
-			return 0
-		fi
-	done
-
-	return 1
-}	
-
-
-fn_check_free_ip_in_ptr_zone2() {
-
-	#v_existing_ips_ptr_zone2=$(sudo sed -n 's/^\([0-9]\+\).*/\1/p' "${v_ptr_zone2}")
-	while IFS= read -r ip
-	do
-        	v_existing_ips_ptr_zone2["$ip"]=1
-	done < <(sudo sed -n 's/^\([0-9]\+\).*/\1/p' "${v_ptr_zone2}")
-
-	for ((v_num_ptr = 0; v_num_ptr <= 255; v_num_ptr++))
-	do
-		#if ! printf '%s\n' "${v_existing_ips_ptr_zone2}" | grep -qw "${v_num_ptr}"
-		if [[ -z "${v_existing_ips_ptr_zone2[$v_num_ptr]}" ]]
-		then
-
-			v_ptr_ip="${v_num_ptr}"
-
-			if [[ "${v_ptr_ip}" -eq 0 ]]
-			then
-				v_ptr_prev=';PTR-Records'
-			else
-				v_ptr_prev=$(( v_num_ptr - 1 ))                   #<--Capturing existing previous IP 
-			fi
-
-			if [[ "${v_ptr_prev}" == ';PTR-Records' ]]
-			then
-				v_ptr_prv_ip=';PTR-Records'
-			else
-				v_ptr_prv_ip="192.168.169.${v_ptr_prev}"
-			fi
-
-			v_ptr_current_ip="192.168.169.${v_ptr_ip}"
-			v_ptr_zone="${v_ptr_zone2}"
-
-			return 0
-		fi
-	done
-
-	return 1
-}	
-
-
-
-fn_check_free_ip_in_ptr_zone1() {
-
-#	v_existing_ips_ptr_zone1=$(sudo sed -n 's/^\([0-9]\+\).*/\1/p' "${v_ptr_zone1}")
-	while IFS= read -r ip
-	do
-        	v_existing_ips_ptr_zone1["$ip"]=1
-	done < <(sudo sed -n 's/^\([0-9]\+\).*/\1/p' "${v_ptr_zone1}")
-
-	for ((v_num_ptr = 2; v_num_ptr <= 255; v_num_ptr++))
-	do
-		#if ! printf '%s\n' "${v_existing_ips_ptr_zone1}" | grep -qw "${v_num_ptr}"
-		if [[ -z "${v_existing_ips_ptr_zone1[$v_num_ptr]}" ]]
-		then
-			v_ptr_ip="${v_num_ptr}"                           #<--Capturing found free IP
-			v_ptr_prev=$(( v_num_ptr - 1 ))                   #<--Capturing existing previous IP 
-  			v_ptr_prv_ip="192.168.168.${v_ptr_prev}"
-			v_ptr_current_ip="192.168.168.${v_ptr_ip}"
-			v_ptr_zone="${v_ptr_zone1}"
+			v_host_part_of_current_ip="${v_num_ptr}"
+			v_host_part_of_previous_ip=$((v_num_ptr - 1))
+			v_current_ip="${v_subnet}.${v_host_part_of_current_ip}"
+			v_previous_ip="${v_subnet}.${v_host_part_of_previous_ip}"
+			v_ptr_zone="${v_file_ptr_zone}"
 			return 0
 		fi
 	done
@@ -173,13 +63,13 @@ f_update_dns_records() {
 	echo -e "\nUpdating A Record . . .\n"
 
 
-	v_add_a_record=$(echo "${v_a_record_adjusted_space} IN A ${v_ptr_current_ip}")
+	v_add_a_record=$(echo "${v_a_record_adjusted_space} IN A ${v_current_ip}")
 
-	if [[ "${v_ptr_prv_ip}" == ';PTR-Records' ]]
+	if [[ "${v_previous_ip}" == ';PTR-Records' ]]
 	then
 		echo "${v_add_a_record}" | sudo tee -a "${v_fw_zone}"
 	else
-		sudo sed -i "/${v_ptr_prv_ip}$/a \\${v_add_a_record}" "${v_fw_zone}"
+		sudo sed -i "/${v_previous_ip}$/a \\${v_add_a_record}" "${v_fw_zone}"
 	fi
 
 	v_current_serial_ptr_zone=$(sudo grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
@@ -195,15 +85,15 @@ f_update_dns_records() {
 
 
 	# Checking number of digits in the IP
-	if [[ "${#v_ptr_ip}" -eq 1 ]]
+	if [[ "${#v_host_part_of_current_ip}" -eq 1 ]]
 	then
   		v_digits=1
 
-	elif [[ "${#v_ptr_ip}" -eq 2 ]]
+	elif [[ "${#v_host_part_of_current_ip}" -eq 2 ]]
 	then
   		v_digits=2
 
-	elif [[ "${#v_ptr_ip}" -eq 3 ]]
+	elif [[ "${#v_host_part_of_current_ip}" -eq 3 ]]
 	then
   		v_digits=3
 	fi
@@ -211,30 +101,30 @@ f_update_dns_records() {
 
 	if [[ "${v_digits}" -eq 1 ]]
 	then
-		v_add_ptr_record=$(echo "${v_ptr_ip}   IN PTR ${v_a_record}.ms.local.")
-		if [[ "${v_ptr_prev}" == ';PTR-Records' ]]
+		v_add_ptr_record=$(echo "${v_host_part_of_current_ip}   IN PTR ${v_a_record}.ms.local.")
+		if [[ "${v_previous_ip}" == ';PTR-Records' ]]
 		then
 			echo "${v_add_ptr_record}" | sudo tee -a "${v_ptr_zone}"
 		else
-			sudo sed -i "/^${v_ptr_prev} /a\\${v_add_ptr_record}" "${v_ptr_zone}"
+			sudo sed -i "/^${v_host_part_of_previous_ip} /a\\${v_add_ptr_record}" "${v_ptr_zone}"
 		fi
 	elif [[ "${v_digits}" -eq 2 ]]
 	then
-		v_add_ptr_record=$(echo "${v_ptr_ip}  IN PTR ${v_a_record}.ms.local.")
-		if [[ "${v_ptr_prev}" == ';PTR-Records' ]]
+		v_add_ptr_record=$(echo "${v_host_part_of_current_ip}  IN PTR ${v_a_record}.ms.local.")
+		if [[ "${v_previous_ip}" == ';PTR-Records' ]]
 		then
 			echo "${v_add_ptr_record}" | sudo tee "${v_ptr_zone}"
 		else
-			sudo sed -i "/^${v_ptr_prev} /a\\${v_add_ptr_record}" "${v_ptr_zone}"
+			sudo sed -i "/^${v_host_part_of_previous_ip} /a\\${v_add_ptr_record}" "${v_ptr_zone}"
 		fi
 	elif [[ "${v_digits}" -eq 3 ]]
 	then
-		v_add_ptr_record=$(echo "${v_ptr_ip} IN PTR ${v_a_record}.ms.local.")
-		if [[ "${v_ptr_prev}" == ';PTR-Records' ]]
+		v_add_ptr_record=$(echo "${v_host_part_of_current_ip} IN PTR ${v_a_record}.ms.local.")
+		if [[ "${v_previous_ip}" == ';PTR-Records' ]]
 		then
 			echo "${v_add_ptr_record}" | sudo tee "${v_ptr_zone}"
 		else
-			sudo sed -i "/^${v_ptr_prev} /a\\${v_add_ptr_record}" "${v_ptr_zone}"
+			sudo sed -i "/^${v_host_part_of_previous_ip} /a\\${v_add_ptr_record}" "${v_ptr_zone}"
 		fi
 	fi
 
@@ -263,7 +153,7 @@ f_update_dns_records() {
 	
 	echo -e "\nReverse Look Up ...\n"
 
-	nslookup ${v_ptr_current_ip} 
+	nslookup ${v_current_ip} 
 }
 
 
@@ -309,10 +199,10 @@ f_get_a_record "${1}"
 
 echo -e "\nLooking for available IPs in Network 192.168.168.0/22 . . .\n"
 
-fn_check_free_ip_in_ptr_zone1 || \
-fn_check_free_ip_in_ptr_zone2 || \
-fn_check_free_ip_in_ptr_zone3 || \
-fn_check_free_ip_in_ptr_zone4 || \
+fn_check_free_ip "${v_ptr_zone1}" "1" "255" "192.168.168" || \
+fn_check_free_ip "${v_ptr_zone2}" "0" "255" "192.168.169" || \
+fn_check_free_ip "${v_ptr_zone3}" "0" "255" "192.168.170" || \
+fn_check_free_ip "${v_ptr_zone4}" "0" "254" "192.168.171" || \
 { echo -e "\nNo more IPs available in 192.168.168.0/22 Network of ms.local domain! \n"; exit 255; }
 
 f_update_dns_records
