@@ -5,10 +5,6 @@ v_ptr_zone1="${v_zone_dir}/192.168.168.ms.local-reverse.db"
 v_ptr_zone2="${v_zone_dir}/192.168.169.ms.local-reverse.db"
 v_ptr_zone3="${v_zone_dir}/192.168.170.ms.local-reverse.db"
 v_ptr_zone4="${v_zone_dir}/192.168.171.ms.local-reverse.db"
-v_tmp_ptr_zone1_exhausted="/tmp/tmp_ptr_zone1_exhausted"
-v_tmp_ptr_zone2_exhausted="/tmp/tmp_ptr_zone2_exhausted"
-v_tmp_ptr_zone3_exhausted="/tmp/tmp_ptr_zone3_exhausted"
-v_tmp_ptr_zone4_exhausted="/tmp/tmp_ptr_zone4_exhausted"
 
 if ! sudo -l | grep NOPASSWD &> /dev/null
 then
@@ -64,13 +60,14 @@ f_update_dns_records() {
         v_num_spaces=$(( v_target_length - ${#v_a_record} ))
   	v_a_record_adjusted_space="${v_a_record}$(printf '%*s' "${v_num_spaces}")"
 
-	${v_if_autorun_false} && echo -e "\nUpdating A Record . . .\n"
+	echo -e "\nUpdating A Record . . .\n"
+
 
 	v_add_a_record=$(echo "${v_a_record_adjusted_space} IN A ${v_current_ip}")
 
 	if [[ "${v_previous_ip}" == ';PTR-Records' ]]
 	then
-		echo "${v_add_a_record}" | sudo tee -a "${v_fw_zone}" &>/dev/null
+		echo "${v_add_a_record}" | sudo tee -a "${v_fw_zone}"
 	else
 		sudo sed -i "/${v_previous_ip}$/a \\${v_add_a_record}" "${v_fw_zone}"
 	fi
@@ -84,7 +81,7 @@ f_update_dns_records() {
 
 
 	################## PTR Record Updating  Section ###################################
-	${v_if_autorun_false} && echo -e "\nUpdating PTR Record . . .\n"
+	echo -e "\nUpdating PTR Record . . .\n"
 
 
 	# Checking number of digits in the IP
@@ -107,20 +104,28 @@ f_update_dns_records() {
 		v_add_ptr_record=$(echo "${v_host_part_of_current_ip}   IN PTR ${v_a_record}.ms.local.")
 		if [[ "${v_previous_ip}" == ';PTR-Records' ]]
 		then
-			echo "${v_add_ptr_record}" | sudo tee -a "${v_ptr_zone}" &>/dev/null
+			echo "${v_add_ptr_record}" | sudo tee -a "${v_ptr_zone}"
 		else
 			sudo sed -i "/^${v_host_part_of_previous_ip} /a\\${v_add_ptr_record}" "${v_ptr_zone}"
 		fi
-
 	elif [[ "${v_digits}" -eq 2 ]]
 	then
 		v_add_ptr_record=$(echo "${v_host_part_of_current_ip}  IN PTR ${v_a_record}.ms.local.")
-		sudo sed -i "/^${v_host_part_of_previous_ip} /a\\${v_add_ptr_record}" "${v_ptr_zone}"
-
+		if [[ "${v_previous_ip}" == ';PTR-Records' ]]
+		then
+			echo "${v_add_ptr_record}" | sudo tee "${v_ptr_zone}"
+		else
+			sudo sed -i "/^${v_host_part_of_previous_ip} /a\\${v_add_ptr_record}" "${v_ptr_zone}"
+		fi
 	elif [[ "${v_digits}" -eq 3 ]]
 	then
 		v_add_ptr_record=$(echo "${v_host_part_of_current_ip} IN PTR ${v_a_record}.ms.local.")
-		sudo sed -i "/^${v_host_part_of_previous_ip} /a\\${v_add_ptr_record}" "${v_ptr_zone}"
+		if [[ "${v_previous_ip}" == ';PTR-Records' ]]
+		then
+			echo "${v_add_ptr_record}" | sudo tee "${v_ptr_zone}"
+		else
+			sudo sed -i "/^${v_host_part_of_previous_ip} /a\\${v_add_ptr_record}" "${v_ptr_zone}"
+		fi
 	fi
 
 	v_current_serial_ptr_zone=$(sudo grep ';Serial' "${v_ptr_zone}" | cut -d ";" -f 1 | tr -d '[:space:]')
@@ -129,29 +134,26 @@ f_update_dns_records() {
 
 	############# End of PTR Record Updating Section #######################
 
-	if ${v_if_autorun_false}
-	then
-		echo -e "\nReloading the DNS service ( named ) . . .\n"
+	echo -e "\nReloading the DNS service ( named ) . . .\n"
 
-		sudo systemctl reload named &>/dev/null
+	sudo systemctl reload named &>/dev/null
 
-		if sudo systemctl is-active named &>/dev/null;
-		then 
-			echo "Reloaded, service  named is active and running ."
-		else
-			echo -e "\nSomething went wrong !\nService named is not running !\nPlease troubleshoot manually\n"
-		fi
-        
-		echo -e "\nSuccessfully created DNS records for \"${v_a_record}\"\n"
-	
-		echo -e "\nForward Look Up ...\n"
-
-		nslookup ${v_a_record} | grep -A 1 ^Name 
-	
-		echo -e "\nReverse Look Up ...\n"
-
-		nslookup ${v_current_ip} 
+	if sudo systemctl is-active named &>/dev/null;
+	then 
+		echo "Reloaded, service  named is active and running ."
+	else
+		echo -e "\nSomething went wrong !\nService named is not running !\nPlease troubleshoot manually\n"
 	fi
+        
+	echo -e "\nSuccessfully created DNS records for \"${v_a_record}\"\n"
+	
+	echo -e "\nForward Look Up ...\n"
+
+	nslookup ${v_a_record} | grep -A 1 ^Name 
+	
+	echo -e "\nReverse Look Up ...\n"
+
+	nslookup ${v_current_ip} 
 }
 
 
@@ -163,11 +165,8 @@ f_get_a_record() {
                 v_a_record=${1}
 		if [[ ! ${v_a_record} =~ ^[[:alpha:]]([-[:alnum:]]*)$ ]]
 		then
-                        if ${v_if_autorun_false}
-			then
-				echo -e "Provided input hostname \"${v_a_record}\" is invalid!\n"
-				echo -e "Please use only letters, numbers, and hyphens.\n (cannot start with a number or hyphen).\n"
-			fi
+                        echo -e "Provided input hostname \"${v_a_record}\" is invalid!\n"
+			echo -e "Please use only letters, numbers, and hyphens.\n (cannot start with a number or hyphen).\n"
 			exit 9
 		fi
 
@@ -188,64 +187,23 @@ f_get_a_record() {
 		done
 	fi
 
-	if sudo grep -w "^${v_a_record} "  ${v_fw_zone} &>/dev/null
+	if sudo grep -w "^${v_a_record} "  ${v_fw_zone}
 	then 
-		${v_if_autorun_false} && echo -e "\nA Record for \"${v_a_record}\" already exists in \"${v_fw_zone}\"\n"
+		echo -e "\nA Record for \"${v_a_record}\" already exists in \"${v_fw_zone}\"\n"
 		exit 8
 	fi
 }
 	
-if [[ "${2}" != "Automated-Execution" ]]
-then
-	v_if_autorun_false=true	
-else
-	v_if_autorun_false=false	
-fi
-
+	
 f_get_a_record "${1}"
 
-${v_if_autorun_false} && echo -e "\nLooking for available IPs in Network 192.168.168.0/22 . . .\n"
+echo -e "\nLooking for available IPs in Network 192.168.168.0/22 . . .\n"
 
-fn_check_zones_and_find_ip() {
-
-	if [ ! -f "${v_tmp_ptr_zone1_exhausted}" ]
-	then 
-		if ! fn_check_free_ip "${v_ptr_zone1}" "1" "255" "192.168.168"
-		then
-			touch "${v_tmp_ptr_zone1_exhausted}"
-			fn_check_zones_and_find_ip
-		fi
-
-	elif [ ! -f "${v_tmp_ptr_zone2_exhausted}" ]
-	then 
-		if ! fn_check_free_ip "${v_ptr_zone2}" "0" "255" "192.168.169"
-		then
-			touch "${v_tmp_ptr_zone2_exhausted}"
-			fn_check_zones_and_find_ip
-		fi
-
-	elif [ ! -f "${v_tmp_ptr_zone3_exhausted}" ]
-	then 
-		if ! fn_check_free_ip "${v_ptr_zone3}" "0" "255" "192.168.170"
-		then
-			touch "${v_tmp_ptr_zone3_exhausted}"
-			fn_check_zones_and_find_ip
-		fi
-
-	elif [ ! -f "${v_tmp_ptr_zone4_exhausted}" ]
-	then 
-		if ! fn_check_free_ip "${v_ptr_zone4}" "0" "254" "192.168.171"
-		then
-			touch "${v_tmp_ptr_zone4_exhausted}"
-			fn_check_zones_and_find_ip
-		fi
-	else
-		${v_if_autorun_false} && echo -e "\nNo more IPs available in 192.168.168.0/22 Network of ms.local domain! \n"
-		exit 255
-	fi
-}
-
-fn_check_zones_and_find_ip
+fn_check_free_ip "${v_ptr_zone1}" "1" "255" "192.168.168" || \
+fn_check_free_ip "${v_ptr_zone2}" "0" "255" "192.168.169" || \
+fn_check_free_ip "${v_ptr_zone3}" "0" "255" "192.168.170" || \
+fn_check_free_ip "${v_ptr_zone4}" "0" "254" "192.168.171" || \
+{ echo -e "\nNo more IPs available in 192.168.168.0/22 Network of ms.local domain! \n"; exit 255; }
 
 f_update_dns_records
 
