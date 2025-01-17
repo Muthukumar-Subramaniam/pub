@@ -90,12 +90,12 @@ do
 	if [[ ${v_host_count} -le ${v_total_host_records} ]];then
 
 		echo -e "#############################( Running )###############################"
-		echo -ne "\n${v_GREEN}Status : Processing provided host records [ ${v_host_count}/${v_total_host_records} ]${v_RESET}"
+		echo -ne "\n${v_GREEN}Status : [ ${v_host_count}/${v_total_host_records} ] host records are being processed${v_RESET}"
 	fi
 
 	let v_host_count++
 
-	echo -ne "\n\n${v_CYAN}Attempting to create host record for ${v_host_to_create} . . . ${v_RESET}"
+	echo -ne "\n\n${v_CYAN}Attempting to create the host record ${v_host_to_create}.ms.local . . . ${v_RESET}"
 
 	v_serial_fw_zone_pre_execution=$(sudo grep ';Serial' ${var_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
 
@@ -142,7 +142,7 @@ do
 		clear
 		echo -e "###########################(DNS-MultiMaker)############################\n"
 		echo -e "#############################( Completed )#############################\n"
-		echo -ne "${v_GREEN}Status : Processed provided host records [ ${v_host_count}/${v_total_host_records} ]${v_RESET}"
+		echo -ne "${v_GREEN}Status : [ ${v_host_count}/${v_total_host_records} ] host records have been processed${v_RESET}"
 	fi
 
 
@@ -166,8 +166,6 @@ else
 	echo -e "\n\n${v_YELLOW}No changes done! Nothing to do!${v_RESET}"
 fi
 	
-
-echo -e "\n${v_CYAN}Script $(basename $0) completed execution !${v_RESET}"
 echo -e "\n${v_YELLOW}Please find the below details of the records :\n${v_RESET}"
 
 echo -e "${v_CYAN}Action-Taken     FQDN ( IPv4-Address )${v_RESET}"

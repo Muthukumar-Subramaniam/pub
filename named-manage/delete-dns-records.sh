@@ -19,8 +19,12 @@ fn_get_a_record() {
 		v_a_record=${v_input_host}
 		if [[ ! ${v_a_record} =~ ^[[:alpha:]]([-[:alnum:]]*)$ ]]
                 then
-                        echo -e "Provided input hostname \"${v_a_record}\" is invalid!\n"
-                        echo -e "Please use only letters, numbers, and hyphens.\n (cannot start with a number or hyphen).\n"
+			if ${v_if_autorun_false}
+			then
+                        	echo -e "Provided input hostname \"${v_a_record}\" is invalid!\n"
+                        	echo -e "Please use only letters, numbers, and hyphens.\n (cannot start with a number or hyphen).\n"
+			fi
+
 			exit 9
                 fi
 
@@ -41,8 +45,12 @@ fn_get_a_record() {
 
 	if ! sudo grep "^${v_a_record} "  ${v_fw_zone} &>/dev/null
 	then 
-		echo -e "\nA Record for \"${v_a_record}\" not found in \"${v_fw_zone}\"\n"
-		echo -e "Nothing to do ! Exiting !\n"
+		if ${v_if_autorun_false}
+		then
+			echo -e "\nA Record for \"${v_a_record}\" not found in \"${v_fw_zone}\"\n"
+			echo -e "Nothing to do ! Exiting !\n"
+		fi
+
 		exit 8
 	fi
 }
@@ -66,9 +74,9 @@ f_delete_records() {
 
 			sudo sed -i "/^${v_capture_ptr_prefix} /d" "${v_ptr_zone}"
 			sudo sed -i "/^${v_capture_a_record}/d" "${v_fw_zone}"
-			echo -e "\nDeleted A and PTR records of ${v_a_record} from ${v_ptr_zone} and ${v_fw_zone}.\n"
+			${v_if_autorun_false} && echo -e "\nDeleted A and PTR records of ${v_a_record} from ${v_ptr_zone} and ${v_fw_zone}.\n"
 
-			echo -e "\nUpdating Serial Numbers of zone files . ..\n"
+			${v_if_autorun_false} && echo -e "\nUpdating Serial Numbers of zone files . ..\n"
 			
 			v_current_serial_ptr_zone=$(sudo grep ';Serial' "${v_ptr_zone}" | cut -d ";" -f 1 | tr -d '[:space:]')
         		v_set_new_serial__ptr_zone=$(( v_current_serial_ptr_zone + 1 ))
@@ -78,20 +86,24 @@ f_delete_records() {
         		v_set_new_serial__ptr_zone=$(( v_current_serial_ptr_zone + 1 ))
         		sudo sed -i "/;Serial/s/${v_current_serial_ptr_zone}/${v_set_new_serial__ptr_zone}/g" "${v_fw_zone}"
 
+			if ${v_if_autorun_false}
+			then
 
-			echo -e "\nReloading the DNS service ( named ) . . .\n"
+				echo -e "\nReloading the DNS service ( named ) . . .\n"
 
-        		sudo systemctl reload named &>/dev/null
+        			sudo systemctl reload named &>/dev/null
 
-        		if sudo systemctl is-active named &>/dev/null;
-        		then
-                		echo "Reloaded, service  named is active and running ."
-        		else
-                		echo -e "\nSomething went wrong !\n\
-				Service named is not running !\nPlease troubleshoot manually\n"
-        		fi
+        			if sudo systemctl is-active named &>/dev/null;
+        			then
+                			echo "Reloaded, service  named is active and running ."
+        			else
+                			echo -e "\nSomething went wrong !\n\
+					Service named is not running !\nPlease troubleshoot manually\n"
+        			fi
 
-        		echo -e "\nSuccessfully deleted DNS records of \"${v_a_record}\"\n"
+        			echo -e "\nSuccessfully deleted DNS records of \"${v_a_record}\"\n"
+			fi
+
 			break
 
 		elif [[ ${v_confirmation} == "n" ]]
@@ -107,30 +119,37 @@ f_delete_records() {
 	done
 }
 
+if [[ "${3}" != "Automated-Execution" ]]
+then
+	v_if_autorun_false=true	
+else
+	v_if_autorun_false=false	
+fi
+
 fn_get_a_record "${1}"
 
 v_capture_a_record=$(sudo grep "^${v_a_record} " "${v_fw_zone}" ) 
-v_capture_a_record_ip=$(sudo grep "^${v_a_record} " ${v_fw_zone} | cut -d "A" -f 2 | tr -d '[[:space:]]')
-v_capture_ptr_prefix=$(echo ${v_capture_a_record_ip} | cut -d "." -f 4 )
+v_capture_a_record_ip=$(sudo grep "^${v_a_record} " ${v_fw_zone} | awk '{print $NF}' | tr -d '[:space:]')
+v_capture_ptr_prefix=$(awk -F. '{ print $4 }' <<< ${v_capture_a_record_ip} )
 
 if echo ${v_capture_a_record_ip} | grep '192.168.168' &>/dev/null
 then
-	echo -e "\nMatch found with IP ${v_capture_a_record_ip} for ${v_a_record}.\n"
+	${v_if_autorun_false} && echo -e "\nMatch found with IP ${v_capture_a_record_ip} for ${v_a_record}.\n"
 	f_delete_records "${v_ptr_zone1}" "${2}"
 
 elif echo ${v_capture_a_record_ip} | grep '192.168.169' &>/dev/null
 then
-	echo -e "\nMatch found with IP ${v_capture_a_record_ip} for ${v_a_record}.\n"
+	${v_if_autorun_false} && echo -e "\nMatch found with IP ${v_capture_a_record_ip} for ${v_a_record}.\n"
 	f_delete_records "${v_ptr_zone2}" "${2}"
 
 elif echo ${v_capture_a_record_ip} | grep '192.168.170' &>/dev/null
 then
-	echo -e "\nMatch found with IP ${v_capture_a_record_ip} for ${v_a_record}.\n"
+	${v_if_autorun_false} && echo -e "\nMatch found with IP ${v_capture_a_record_ip} for ${v_a_record}.\n"
 	f_delete_records "${v_ptr_zone3}" "${2}"
 
 elif echo ${v_capture_a_record_ip} | grep '192.168.171' &>/dev/null
 then
-	echo -e "\nMatch found with IP ${v_capture_a_record_ip} for ${v_a_record}.\n"
+	${v_if_autorun_false} && echo -e "\nMatch found with IP ${v_capture_a_record_ip} for ${v_a_record}.\n"
 	f_delete_records "${v_ptr_zone4}" "${2}"
 fi
 
