@@ -1,5 +1,5 @@
 #!/bin/bash
-v_dns_record_creator='/scripts_by_muthu/server/named-manage/create-dns-records.sh'
+v_dnsmanager='/scripts_by_muthu/server/named-manage/dnsmanager.sh'
 v_ks_manage_dir='/scripts_by_muthu/server/ks-manage'
 v_ks_manager_kickstarts_dir='/var/www/server.ms.local/ks-manager-kickstarts'
 v_get_ipv4_domain='ms.local'
@@ -56,8 +56,8 @@ then
 
 		if [[ "${v_confirmation}" == "y" ]]
 		then
-			echo -e "\nExecuting the script ${v_dns_record_creator} . . .\n"
-			"${v_dns_record_creator}" "${v_get_hostname}"
+			echo -e "\nExecuting the script ${v_dnsmanager} . . .\n"
+			"${v_dnsmanager}" -c "${v_get_hostname}"
 
 			if host "${v_get_hostname}" &>/dev/null
 			then

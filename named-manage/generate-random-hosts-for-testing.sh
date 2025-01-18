@@ -1,7 +1,5 @@
 #!/bin/bash
 
-> tmp_hosts
-
 while :
 do
 	echo
@@ -15,6 +13,8 @@ do
 		continue
 	fi
 done
+
+> tmp_hosts
 
 echo -e "\nGenerating ${v_input_number} random hosts as requested . . .\n"
 
