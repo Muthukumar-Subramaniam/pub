@@ -30,37 +30,90 @@ fn_get_host_record() {
 	v_input_host="${1}"
 	v_action_requested="${2}"
 
+	fn_instruct_on_valid_host_record() {
+		echo -e "\n${v_RED}> Only letters, numbers, and hyphens are allowed."
+		echo -e "> Hyphens cannot appear at the start or end."
+		echo -e "> The total length must be between 1 and 63 characters."
+		echo -e "> The domain name 'ms.local' will be appended if not present."
+		echo -e "> Follows the format defined in RFC 1035.${v_RESET}\n"
+		exit
+	}
+
+	fn_get_host_record_from_user() {
+
+		while :
+		do
+			echo
+
+			if [[ "${v_action_requested}" != "rename" ]]
+			then
+				read -p "Please Enter the name of host record to ${v_action_requested} : " v_input_host_record
+			else
+				if [ -z "${v_host_record}" ]
+				then
+					read -p "Please Enter the name of host record to ${v_action_requested} : " v_input_host_record
+				else
+					read -p "Please Enter the name of host record to ${v_action_requested} \"${v_host_record}\" : " v_input_host_record
+				fi
+			fi
+				
+			v_input_host_record="${v_input_host_record%.ms.local.}"  
+			v_input_host_record="${v_input_host_record%.ms.local}"
+
+			if [[ "${v_action_requested}" != "rename" ]]
+			then
+				v_host_record="${v_input_host_record}"
+			else
+				if [ -z "${v_host_record}" ]
+				then
+					v_host_record="${v_input_host_record}"
+				else
+					v_rename_record="${v_input_host_record}"
+				fi
+			fi
+
+			if [[ "${#v_input_host_record}" -le 63 ]] && [[ "${v_input_host_record}" =~ ^[[:alnum:]]([-[:alnum:]]*[[:alnum:]])$ ]]
+	       		then
+				if [[ "${v_action_requested}" != "rename" ]]
+				then
+					v_host_record="${v_input_host_record}"
+				else
+					if [ -z "${v_host_record}" ]
+					then
+						v_host_record="${v_input_host_record}"
+					else
+						v_rename_record="${v_input_host_record}"
+					fi
+				fi
+
+    				break
+  			else
+				fn_instruct_on_valid_host_record
+  			fi
+		done
+	}
+
 	if [[ ! -z ${v_input_host} ]]
 	then
                 v_host_record=${1}
-		if [[ ! ${v_host_record} =~ ^[[:alpha:]]([-[:alnum:]]*)$ ]]
+		v_host_record="${v_host_record%.ms.local.}"  
+		v_host_record="${v_host_record%.ms.local}"
+
+		if [[ ! ${v_host_record} =~ ^[[:alnum:]]([-[:alnum:]]*[[:alnum:]])$ ]] || [[ ! "${#v_host_record}" -le 63 ]]
 		then
                         if ${v_if_autorun_false}
 			then
-				echo -e "Provided input hostname \"${v_host_record}\" is invalid!\n"
-				echo -e "Please use only letters, numbers, and hyphens.\n (cannot start with a number or hyphen).\n"
+				fn_instruct_on_valid_host_record
+			else
+				return 9
 			fi
-			return 9
 		fi
 
 	else
-		while :
-		do
-			echo -e "\nPlease use only letters, numbers, and hyphens.\n (Please do not start with a number or hyphen)."
-			echo -e "No need to append the domain name ms.local\n"
-
-			read -p "Please Enter the name of host record to ${v_action_requested} : " v_host_record
-
-			if [[ ${v_host_record} =~ ^[[:alpha:]]([-[:alnum:]]*)$ ]]
-	       		then
-    				break
-  			else
-    				echo -e "Invalid name!\nPlease use only letters, numbers, and hyphens.\n (cannot start with a number or hyphen).\n"
-  			fi
-		done
+		fn_get_host_record_from_user
 	fi
 
-	if sudo grep -w "^${v_host_record} "  ${v_fw_zone} &>/dev/null
+	if sudo grep "^${v_host_record} "  "${v_fw_zone}" &>/dev/null
 	then 
 		if [[ "${v_action_requested}" == "create" ]]
 		then
@@ -69,21 +122,9 @@ fn_get_host_record() {
 
 		elif [[ "${v_action_requested}" == "rename" ]]
 		then
-			while :
-			do
-				echo -e "\nPlease use only letters, numbers, and hyphens.\n (Please do not start with a number or hyphen)."
-				echo -e "No need to append the domain name ms.local\n"
-				read -p "Please Enter the hostname to replace \"${v_host_record}\" : " v_rename_record
+			fn_get_host_record_from_user
 
-				if [[ ${v_rename_record} =~ ^[[:alpha:]]([-[:alnum:]]*)$ ]]
-	       			then
-    					break
-  				else
-    					echo -e "Invalid name!\nPlease use only letters, numbers, and hyphens.\n (cannot start with a number or hyphen).\n"
-  				fi
-			done
-
-			if sudo grep  "^${v_rename_record} "  ${v_fw_zone}
+			if sudo grep "^${v_rename_record} "  "${v_fw_zone}" &>/dev/null
 			then 
 				echo -e "\nConflict : Existing A Record found for \"${v_rename_record}\" in  \"${v_fw_zone}\"\n"
 				echo -e "Nothing to do ! Exiting !\n"
@@ -97,9 +138,10 @@ fn_get_host_record() {
 		then
 			echo -e "\nA Record for \"${v_host_record}\" not found in \"${v_fw_zone}\"\n"
 			echo -e "Nothing to do ! Exiting !\n"
+			exit
+		else
+			return 8
 		fi
-
-		return 8
 		
 	fi
 }
@@ -297,9 +339,7 @@ fn_create_host_record() {
 
 	############### A Record Creation Section ############################
 
-  	v_target_length=39
-        v_num_spaces=$(( v_target_length - ${#v_host_record} ))
-  	v_host_record_adjusted_space="${v_host_record}$(printf '%*s' "${v_num_spaces}")"
+	v_host_record_adjusted_space=$(printf "%-*s" 63 "${v_host_record}")
 
 	${v_if_autorun_false} && echo -e "\nUpdating A Record . . .\n"
 
@@ -319,40 +359,14 @@ fn_create_host_record() {
 	################## PTR Record Create  Section ###################################
 	${v_if_autorun_false} && echo -e "\nUpdating PTR Record . . .\n"
 
+	v_space_adjusted_host_part_of_current_ip=$(printf "%-*s" 3 "${v_host_part_of_current_ip}")
 
-	# Checking number of digits in the IP
-	if [[ "${#v_host_part_of_current_ip}" -eq 1 ]]
+	v_add_ptr_record=$(echo "${v_space_adjusted_host_part_of_current_ip} IN PTR ${v_host_record}.ms.local.")
+
+	if [[ "${v_previous_ip}" == ';PTR-Records' ]]
 	then
-  		v_digits=1
-
-	elif [[ "${#v_host_part_of_current_ip}" -eq 2 ]]
-	then
-  		v_digits=2
-
-	elif [[ "${#v_host_part_of_current_ip}" -eq 3 ]]
-	then
-  		v_digits=3
-	fi
-
-
-	if [[ "${v_digits}" -eq 1 ]]
-	then
-		v_add_ptr_record=$(echo "${v_host_part_of_current_ip}   IN PTR ${v_host_record}.ms.local.")
-		if [[ "${v_previous_ip}" == ';PTR-Records' ]]
-		then
-			echo "${v_add_ptr_record}" | sudo tee -a "${v_ptr_zone}" &>/dev/null
-		else
-			sudo sed -i "/^${v_host_part_of_previous_ip} /a\\${v_add_ptr_record}" "${v_ptr_zone}"
-		fi
-
-	elif [[ "${v_digits}" -eq 2 ]]
-	then
-		v_add_ptr_record=$(echo "${v_host_part_of_current_ip}  IN PTR ${v_host_record}.ms.local.")
-		sudo sed -i "/^${v_host_part_of_previous_ip} /a\\${v_add_ptr_record}" "${v_ptr_zone}"
-
-	elif [[ "${v_digits}" -eq 3 ]]
-	then
-		v_add_ptr_record=$(echo "${v_host_part_of_current_ip} IN PTR ${v_host_record}.ms.local.")
+		echo "${v_add_ptr_record}" | sudo tee -a "${v_ptr_zone}" &>/dev/null
+	else
 		sudo sed -i "/^${v_host_part_of_previous_ip} /a\\${v_add_ptr_record}" "${v_ptr_zone}"
 	fi
 
