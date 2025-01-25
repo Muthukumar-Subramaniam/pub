@@ -7,137 +7,24 @@ v_BLUE='\033[0;34m'     # Blue
 v_CYAN='\033[0;36m'     # Cyan
 v_MAGENTA='\033[0;35m'  # Magenta
 v_RESET='\033[0m'       # Reset to default color
+var_named_manage_dir='/scripts_by_muthu/server/named-manage'
+var_zone_dir='/var/named/zone-files'
+v_fw_zone="${var_zone_dir}/ms.local-forward.db"
+v_total_ptr_zones=4
+
+for ((v_zone_number=1; v_zone_number<=v_total_ptr_zones; v_zone_number++))
+do
+    eval "v_ptr_zone${v_zone_number}=\"${var_zone_dir}/192.168.$((167 + v_zone_number)).ms.local-reverse.db\""
+    eval "v_subnet${v_zone_number}=\"192.168.$((167 + v_zone_number))\""
+done
+
+v_tmp_file_dnsmanager="/tmp/tmp_file_dnsmanager"
 
 if ! sudo -l | grep NOPASSWD &> /dev/null
 then
 	echo -e "${v_RED}\nYou need sudo access without password to run this script! ${v_RESET}\n"
 	exit
 fi
-
-v_domain_name=$(if [ -f /etc/named.conf ];then sudo grep 'zones-of-.*-domain' /etc/named.conf | sed -n 's/.*zones-of-\(.*\)-domain.*/\1/p;q' | tr '-' '.';fi)
-var_zone_dir='/var/named/zone-files'
-v_fw_zone="${var_zone_dir}/${v_domain_name}-forward.db"
-
-fn_split_network_into_cidr24subnets() {
-	# Function to convert an IP address to a number
-	fn_ip_to_int() {
-    	local ip=${1}
-    	local a b c d
-    	IFS=. read -r a b c d <<< "$ip"
-    	echo "$((a * 256 ** 3 + b * 256 ** 2 + c * 256 + d))"
-	}
-	
-	# Function to convert a number back to an IP address
-	fn_int_to_ip() {
-    	local int=${1}
-    	echo "$((int >> 24 & 255)).$((int >> 16 & 255)).$((int >> 8 & 255)).$((int & 255))"
-	}
-	
-	# Function to generate /24 subnets within a given network
-	fn_generate_subnets() {
-    	local v_network=${1}
-    	local v_cidr=${2}
-	
-    	# Convert network address to an integer
-    	local v_network_int
-    	v_network_int=$(fn_ip_to_int "${v_network}")
-	
-    	# Calculate the number of subnets to generate
-    	local v_subnet_count
-    	v_subnet_count=$(( 2 ** (32 - v_cidr) / 256 ))
-	
-    	# Generate subnets
-    	for ((i = 0; i < v_subnet_count; i++)); do
-        	local v_subnet_int=$(( v_network_int + i * 256 ))
-        	local v_subnet
-        	v_subnet=$(fn_int_to_ip "${v_subnet_int}")
-        	echo "${v_subnet}/24"
-    	done
-	}
-	
-	v_primary_interface=$(ip r | grep default | awk '{ print $5 }')
-	v_network_gateway=$(ip r | grep default | awk '{ print $3 }')
-	v_network_and_cidr=$(ip r | grep -v default | grep "${v_primary_interface}" | head -n 1 | awk '{ print $1 }')
-	
-	# Extract network and CIDR from input
-	v_network=$(echo "${v_network_and_cidr}" | cut -d/ -f1)
-	v_cidr=$(echo "${v_network_and_cidr}" | cut -d/ -f2)
-	
-	# Check if CIDR is valid
-	if ! [[ "${v_cidr}" =~ ^[0-9]+$ ]] || [ "${v_cidr}" -lt 16 ] || [ "${v_cidr}" -gt 24 ]; then
-    	echo "Invalid CIDR. Only Networks with CIDR between 16 and 24 is allowed."
-    	exit 1
-	fi
-	
-	# Generate and display the subnets
-	fn_generate_subnets "${v_network}" "${v_cidr}" |  sed "s/\.0\/24//"
-}
-
-v_splited_subnets=$(fn_split_network_into_cidr24subnets)
-v_total_ptr_zones=$(echo ${v_splited_subnets} | awk '{print NF}')
-
-v_zone_number=1
-for v_subnet_part in ${v_splited_subnets}
-do
-    eval "v_ptr_zone${v_zone_number}=\"${var_zone_dir}/${v_subnet_part}.${v_domain_name}-reverse.db\""
-    eval "v_subnet${v_zone_number}=\"${v_subnet_part}\""
-    let v_zone_number++
-done
-
-v_tmp_file_dnsmanager="/tmp/tmp_file_dnsmanager"
-
-
-fn_configure_named_dns_server() {
-
-	fn_instruct_on_valid_domain_name() {
-		echo -e "\n${v_RED}> Only letters, numbers, and hyphens are allowed."
-		echo -e "> Hyphens cannot appear at the start or end."
-		echo -e "> The total length must be between 1 and 63 characters."
-		echo -e "> The TLD 'local' will be appended if not present."
-		echo -e "> Follows the format defined in RFC 1035.${v_RESET}\n"
-	}
-
-	echo
-	
-	while :
-	do
-		read -p "Provide the preferred SLD for local domain [ Example : mydomain.local  ] : " v_given_domain 
-			
-		if [[ ! "${#v_given_domain}" -le 63 ]] || [[ ! "${v_given_domain}" =~ ^[[:alnum:]]([-[:alnum:]]*[[:alnum:]])$ ]]
-		then
-			fn_instruct_on_valid_domain_name
-			continue
-		else
-			break
-		fi
-	done
-	
-	v_given_record="${v_given_domain%.local.}"  
-	v_given_record="${v_given_domain%.local}"
-
-	echo -e "\n${v_CYAN}Checking whether required bind dns packages are installed . . . ${v_RESET}"
-
-	if rpm -q bind bind-utils &>/dev/null 
-	then
-		echo -ne "${v_GREEN}[ already installed ]${v_RESET}"
-	else
-		echo -ne "${v_YELLOW}[ not yet installed ]${v_RESET}"
-
-		echo -e "\n${v_CYAN}Installing the required bind dns packages . . . ${v_RESET}"
-
-		if yum install bind bind-utils -y &>/dev/null
-		then
-			echo -ne "${v_GREEN}[ installed ]${v_RESET}"
-		else
-			echo -e "${v_RED}[ failed to install ] ${v_RESET}"
-			echo -e "\n${v_RED}Try installing the packages bind and bind-utils manually then try the script again! \n${v_RESET}"
-			exit
-		fi
-	fi
-
-
-
-}
 
 fn_get_host_record() {
 	v_input_host="${1}"
@@ -147,7 +34,7 @@ fn_get_host_record() {
 		echo -e "\n${v_RED}> Only letters, numbers, and hyphens are allowed."
 		echo -e "> Hyphens cannot appear at the start or end."
 		echo -e "> The total length must be between 1 and 63 characters."
-		echo -e "> The domain name '${v_domain_name}' will be appended if not present."
+		echo -e "> The domain name 'ms.local' will be appended if not present."
 		echo -e "> Follows the format defined in RFC 1035.${v_RESET}\n"
 		exit
 	}
@@ -166,12 +53,12 @@ fn_get_host_record() {
 				then
 					read -p "Please Enter the name of host record to ${v_action_requested} : " v_input_host_record
 				else
-					read -p "Please Enter the name of host record to ${v_action_requested} ${v_host_record}.${v_domain_name} : " v_input_host_record
+					read -p "Please Enter the name of host record to ${v_action_requested} ${v_host_record}.ms.local : " v_input_host_record
 				fi
 			fi
 				
-			v_input_host_record="${v_input_host_record%.${v_domain_name}.}"  
-			v_input_host_record="${v_input_host_record%.${v_domain_name}}"
+			v_input_host_record="${v_input_host_record%.ms.local.}"  
+			v_input_host_record="${v_input_host_record%.ms.local}"
 
 			if [[ "${v_action_requested}" != "rename" ]]
 			then
@@ -209,8 +96,8 @@ fn_get_host_record() {
 	if [[ ! -z ${v_input_host} ]]
 	then
                 v_host_record=${1}
-		v_host_record="${v_host_record%.${v_domain_name}.}"  
-		v_host_record="${v_host_record%.${v_domain_name}}"
+		v_host_record="${v_host_record%.ms.local.}"  
+		v_host_record="${v_host_record%.ms.local}"
 
 		if [[ ! ${v_host_record} =~ ^[[:alnum:]]([-[:alnum:]]*[[:alnum:]])$ ]] || [[ ! "${#v_host_record}" -le 63 ]]
 		then
@@ -230,7 +117,7 @@ fn_get_host_record() {
 	then 
 		if [[ "${v_action_requested}" == "create" ]]
 		then
-			${v_if_autorun_false} && echo -e "\n${v_RED}Host record for ${v_host_record}.${v_domain_name} already exists ! ${v_RESET}\n"
+			${v_if_autorun_false} && echo -e "\n${v_RED}Host record for ${v_host_record}.ms.local already exists ! ${v_RESET}\n"
 			${v_if_autorun_false} && echo -e "${v_RED}Nothing to do ! Exiting !  ${v_RESET}\n"
 			return 8
 
@@ -240,7 +127,7 @@ fn_get_host_record() {
 
 			if sudo grep "^${v_rename_record} "  "${v_fw_zone}" &>/dev/null
 			then 
-				echo -e "\n${v_RED}Conflict ! Existing host record found for ${v_rename_record}.${v_domain_name} ! ${v_RESET}\n"
+				echo -e "\n${v_RED}Conflict ! Existing host record found for ${v_rename_record}.ms.local ! ${v_RESET}\n"
 				echo -e "${v_RED}Nothing to do ! Exiting !  ${v_RESET}\n"
 				exit
 			fi
@@ -250,7 +137,7 @@ fn_get_host_record() {
 	then
 		if ${v_if_autorun_false}
 		then
-			echo -e "\n${v_RED}Host record for ${v_host_record}.${v_domain_name} doesn't exist ! ${v_RESET}\n"
+			echo -e "\n${v_RED}Host record for ${v_host_record}.ms.local doesn't exist ! ${v_RESET}\n"
 			echo -e "${v_RED}Nothing to do ! Exiting ! ${v_RESET}\n"
 			exit
 		else
@@ -292,15 +179,15 @@ fn_reload_named_dns_service() {
 
 	if [[  "${v_action_requested}" == "create" ]]
 	then
-		echo -e "\n${v_GREEN}Successfully created host record ${v_host_record}.${v_domain_name}${v_RESET}\n"
+		echo -e "\n${v_GREEN}Successfully created host record ${v_host_record}.ms.local${v_RESET}\n"
 	 
 	elif [[ "${v_action_requested}" == "delete" ]]
 	then
-		echo -e "\n${v_GREEN}Successfully deleted host record ${v_host_record}.${v_domain_name}${v_RESET}\n"
+		echo -e "\n${v_GREEN}Successfully deleted host record ${v_host_record}.ms.local${v_RESET}\n"
 
 	elif [[ "${v_action_requested}" == "rename" ]]
 	then
-        	echo -e "\n${v_GREEN}Successfully renamed host ${v_host_record}.${v_domain_name} to ${v_rename_record}.${v_domain_name}${v_RESET}\n"
+        	echo -e "\n${v_GREEN}Successfully renamed host ${v_host_record}.ms.local to ${v_rename_record}.ms.local${v_RESET}\n"
 	fi
 
 
@@ -337,9 +224,9 @@ fn_reload_named_dns_service() {
 
 		if  [[ "${v_action_requested}" == "rename" ]]
                 then
-			echo -e "\n${v_GREEN}FYI : $(host ${v_rename_record}.${v_domain_name})${v_RESET}\n"
+			echo -e "\n${v_GREEN}FYI : $(host ${v_rename_record}.ms.local)${v_RESET}\n"
 		else
-			echo -e "\n${v_GREEN}FYI : $(host ${v_host_record}.${v_domain_name})${v_RESET}\n"
+			echo -e "\n${v_GREEN}FYI : $(host ${v_host_record}.ms.local)${v_RESET}\n"
 		fi
 	fi
 }
@@ -361,7 +248,7 @@ fn_set_ptr_zone() {
 	do
     		if [[ "${v_current_ip_of_host_record}" =~ ${arr_subnets[i]} ]]
 		then
-        		${v_if_autorun_false} && echo -e "\n${v_GREEN}Match found with IP ${v_current_ip_of_host_record} for host record ${v_host_record}.${v_domain_name} ${v_RESET}\n"
+        		${v_if_autorun_false} && echo -e "\n${v_GREEN}Match found with IP ${v_current_ip_of_host_record} for host record ${v_host_record}.ms.local ${v_RESET}\n"
         		v_ptr_zone="${arr_ptr_zones[i]}"
         		break
     		fi
@@ -460,14 +347,14 @@ fn_create_host_record() {
 				fn_check_free_ip "${v_current_ptr_zone_file}" "0" "254" "${v_current_zubnet}"
 				break
 			else
-				${v_if_autorun_false} && echo -e "\n${v_RED}No more IPs available in 192.168.168.0/22 Network of ${v_domain_name} domain! ${v_RESET}\n"
+				${v_if_autorun_false} && echo -e "\n${v_RED}No more IPs available in 192.168.168.0/22 Network of ms.local domain! ${v_RESET}\n"
 				return 255
 			fi
 		fi
 	done
 
 
-	${v_if_autorun_false} && echo -ne "\n${v_CYAN}Creating host record ${v_host_record}.${v_domain_name} . . . ${v_RESET}"
+	${v_if_autorun_false} && echo -ne "\n${v_CYAN}Creating host record ${v_host_record}.ms.local . . . ${v_RESET}"
 
 	############### A Record Creation Section ############################
 
@@ -490,7 +377,7 @@ fn_create_host_record() {
 
 	v_space_adjusted_host_part_of_current_ip=$(printf "%-*s" 3 "${v_host_part_of_current_ip}")
 
-	v_add_ptr_record=$(echo "${v_space_adjusted_host_part_of_current_ip} IN PTR ${v_host_record}.${v_domain_name}.")
+	v_add_ptr_record=$(echo "${v_space_adjusted_host_part_of_current_ip} IN PTR ${v_host_record}.ms.local.")
 
 	if [[ "${v_previous_ip}" == ';PTR-Records' ]]
 	then
@@ -549,7 +436,7 @@ fn_delete_host_record() {
 
 		if [[ ${v_confirmation} == "y" ]]
 		then
-			${v_if_autorun_false} && echo -ne "\n${v_CYAN}Deleting host record ${v_host_record}.${v_domain_name} . . . ${v_RESET}"
+			${v_if_autorun_false} && echo -ne "\n${v_CYAN}Deleting host record ${v_host_record}.ms.local . . . ${v_RESET}"
 
 			sudo sed -i "/^${v_capture_ptr_prefix} /d" "${v_ptr_zone}"
 			sudo sed -i "/^${v_capture_host_record}/d" "${v_fw_zone}"
@@ -608,13 +495,13 @@ fn_rename_host_record() {
 	
 	while :
 	do
-		read -p "Please confirm to rename the record ${v_host_record}.${v_domain_name} to ${v_rename_record}.${v_domain_name} (y/n) : " v_confirmation
+		read -p "Please confirm to rename the record ${v_host_record}.ms.local to ${v_rename_record}.ms.local (y/n) : " v_confirmation
 		if [[ $v_confirmation == "y" ]]
 		then
-			echo -ne "\n${v_CYAN}Renaming host record ${v_host_record}.${v_domain_name} to ${v_rename_record}.${v_domain_name} . . . ${v_RESET}"
+			echo -ne "\n${v_CYAN}Renaming host record ${v_host_record}.ms.local to ${v_rename_record}.ms.local . . . ${v_RESET}"
 
 			sudo sed -i "s/${v_host_record_exist}/${v_host_record_rename}/g" ${v_fw_zone}
-			sudo sed -i "s/${v_host_record}.${v_domain_name}./${v_rename_record}.${v_domain_name}./g" ${v_ptr_zone}
+			sudo sed -i "s/${v_host_record}.ms.local./${v_rename_record}.ms.local./g" ${v_ptr_zone}
 
 			echo -ne "${v_GREEN}[ done ]${v_RESET}\n"
 			
@@ -674,9 +561,9 @@ fn_handle_multiple_host_record() {
 	
 	sed -i '/^[[:space:]]*$/d' ${v_host_list_file}
 	
-	sed -i 's/.${v_domain_name}.//g' ${v_host_list_file}
+	sed -i 's/.ms.local.//g' ${v_host_list_file}
 	
-	sed -i 's/.${v_domain_name}//g' ${v_host_list_file}
+	sed -i 's/.ms.local//g' ${v_host_list_file}
 	
 	
 	while :
@@ -732,7 +619,7 @@ fn_handle_multiple_host_record() {
 	
 		let v_host_count++
 	
-		echo -ne "\n\n${v_CYAN}Attempting to ${v_action_required} the host record ${v_host_record}.${v_domain_name} . . . ${v_RESET}"
+		echo -ne "\n\n${v_CYAN}Attempting to ${v_action_required} the host record ${v_host_record}.ms.local . . . ${v_RESET}"
 	
 		v_serial_fw_zone_pre_execution=$(sudo grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
 	
@@ -749,7 +636,7 @@ fn_handle_multiple_host_record() {
 	
 		v_serial_fw_zone_post_execution=$(sudo grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
 	
-	        v_fqdn="${v_host_record}.${v_domain_name}"
+	        v_fqdn="${v_host_record}.ms.local"
 	
 	        
 		if [[ ${v_action_required} == "create" ]]
@@ -862,7 +749,7 @@ fn_handle_multiple_host_record() {
 
 fn_main_menu() {
 cat << EOF
-Manage DNS host records with ${v_domain_name} domain,
+Manage DNS host records with ms.local domain,
 1) Create a DNS host record
 2) Delete a DNS host record
 3) Rename an existing DNS host record
