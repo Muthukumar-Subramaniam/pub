@@ -14,7 +14,7 @@ then
 	exit
 fi
 
-v_domain_name=$(if [ -f /etc/named.conf ];then sudo grep 'zones-of-.*-domain' /etc/named.conf | sed -n 's/.*zones-of-\(.*\)-domain.*/\1/p;q' | tr '-' '.';fi)
+v_domain_name=$(if [ -f /etc/named.conf ];then sudo grep 'zones-are-managed-by-dnsmanager' /etc/named.conf | awk '{print $2}';fi)
 var_zone_dir='/var/named/zone-files'
 v_fw_zone="${var_zone_dir}/${v_domain_name}-forward.db"
 
@@ -134,8 +134,6 @@ fn_configure_named_dns_server() {
 			exit
 		fi
 	fi
-
-
 
 }
 
@@ -445,7 +443,7 @@ fn_create_host_record() {
 				continue
 			fi
 
-		elif [[ "${v_zone_number}" -ne 4 ]]
+		elif [[ "${v_zone_number}" -ne "${v_total_ptr_zones}" ]]
 		then
 			if [[ -z ${v_total_ips_in_current_zone} ]] || [[ ${v_total_ips_in_current_zone} -ne 256 ]]
 			then
@@ -460,7 +458,7 @@ fn_create_host_record() {
 				fn_check_free_ip "${v_current_ptr_zone_file}" "0" "254" "${v_current_zubnet}"
 				break
 			else
-				${v_if_autorun_false} && echo -e "\n${v_RED}No more IPs available in 192.168.168.0/22 Network of ${v_domain_name} domain! ${v_RESET}\n"
+				${v_if_autorun_false} && echo -e "\n${v_RED}No more IPs available in ${v_network_and_cidr} Network of ${v_domain_name} domain! ${v_RESET}\n"
 				return 255
 			fi
 		fi
@@ -863,6 +861,7 @@ fn_handle_multiple_host_record() {
 fn_main_menu() {
 cat << EOF
 Manage DNS host records with ${v_domain_name} domain,
+0) Configure local dns server and domain if not done already
 1) Create a DNS host record
 2) Delete a DNS host record
 3) Rename an existing DNS host record
@@ -875,6 +874,9 @@ EOF
 read -p "Please Select an Option from Above : " var_function
 
 case ${var_function} in
+	0) 	fn_configure_named_dns_server
+		exit
+		;;
 	1)
 		fn_create_host_record
 		exit
@@ -929,6 +931,11 @@ then
 			fn_handle_multiple_host_record "${2}" "delete"
 			exit
 			;;
+
+		--deploy) fn_configure_named_dns_server
+			  exit
+			  ;;
+
 		*)
 			if [[ ! "${1}" =~ ^-h|--help$ ]]
 			then
@@ -938,11 +945,12 @@ then
 			cat << EOF
 Usage: dnsmanager [ option ] [ DNS host record ]
 Use one of the following Options :
-	-c 	To create a DNS host record
-	-d 	To delete a DNS host record
-	-r 	To rename an existing DNS host record
-	-cf 	To create multiple DNS host records provided in a file 
-	-df	To delete multiple DNS host records provided in a file
+	-c  To create a DNS host record
+	-d  To delete a DNS host record
+	-r  To rename an existing DNS host record
+	-cf  To create multiple DNS host records provided in a file 
+	-df  To delete multiple DNS host records provided in a file
+	--deploy  To configure local dns server and domain if not done already
 [ Or ]
 Run dnsmanager utility without any arguements to get menu driven actions.
 
