@@ -15,6 +15,16 @@ then
 fi
 
 v_domain_name=$(if [ -f /etc/named.conf ];then sudo grep 'zones-are-managed-by-dnsmanager' /etc/named.conf | awk '{print $2}';fi)
+
+fn_check_existence_of_domain() {
+	if [ -z "${v_domain_name}" ]
+	then
+		echo -e "\n${v_RED}> Seems like bind dns service is not being handled by dnsmanager! ${v_RESET}\n"
+		echo -e "${v_YELLOW}> Please check and setup the same using dnsmanager utility itself! ${v_RESET}\n"
+		exit
+	fi
+}
+
 var_zone_dir='/var/named/zone-files'
 v_fw_zone="${var_zone_dir}/${v_domain_name}-forward.db"
 
@@ -54,8 +64,10 @@ fn_split_network_into_cidr24subnets() {
         	echo "${v_subnet}/24"
     	done
 	}
-	
+
+	v_dns_host_short_name=$(hostname -s)
 	v_primary_interface=$(ip r | grep default | awk '{ print $5 }')
+	v_primary_ip=$(ip r | grep -v default | grep "${v_primary_interface}" | head -n 1 | awk '{ print $9 }')
 	v_network_gateway=$(ip r | grep default | awk '{ print $3 }')
 	v_network_and_cidr=$(ip r | grep -v default | grep "${v_primary_interface}" | head -n 1 | awk '{ print $1 }')
 	
@@ -89,6 +101,14 @@ v_tmp_file_dnsmanager="/tmp/tmp_file_dnsmanager"
 
 fn_configure_named_dns_server() {
 
+	if [ ! -z "${v_domain_name}" ]
+	then
+		echo -e "\n${v_YELLOW}> Seems like bind dns server and domain is already setup and managed by dnsmanager! ${v_RESET}\n"
+		echo -e "${v_GREEN}> Domain '${v_domain_name}' is already being managed by dnsmanager! ${v_RESET}\n"
+		echo -e "${v_YELLOW}> Nothing to do!  ${v_RESET}\n"
+		exit
+	fi
+
 	fn_instruct_on_valid_domain_name() {
 		echo -e "\n${v_RED}> Only letters, numbers, and hyphens are allowed."
 		echo -e "> Hyphens cannot appear at the start or end."
@@ -112,8 +132,14 @@ fn_configure_named_dns_server() {
 		fi
 	done
 	
-	v_given_record="${v_given_domain%.local.}"  
-	v_given_record="${v_given_domain%.local}"
+	v_given_domain="${v_given_domain%.local.}"  
+	v_given_domain="${v_given_domain%.local}"
+
+	echo -e "\n${v_CYAN}Fetching network information from the system . . . ${v_RESET}"
+
+	fn_split_network_into_cidr24subnets
+
+	echo -ne "${v_GREEN}[ done ]${v_RESET}"
 
 	echo -e "\n${v_CYAN}Checking whether required bind dns packages are installed . . . ${v_RESET}"
 
@@ -135,7 +161,121 @@ fn_configure_named_dns_server() {
 		fi
 	fi
 
+	echo -e "\n${v_CYAN}Taking backup of named.conf . . . ${v_RESET}"
+
+	sudo cp -p /etc/named.conf /etc/named.conf_bkp_by_dnsmanager
+	
+	echo -ne "${v_GREEN}[ done ]${v_RESET}"
+
+	echo -e "\n${v_CYAN}Configuring named.conf . . . ${v_RESET}"
+
+	sed -i "s/listen-on port 53 {\s*127.0.0.1;\s*};/listen-on port 53 { 127.0.0.1; ${v_primary_ip}; };/" /etc/named.conf
+
+	sed -i "s/allow-query\s*{\s*localhost;\s*};/allow-query     { localhost; ${v_network}\/${v_cidr}; };/" /etc/named.conf
+
+	sed -i '/dnssec-validation yes;/d' /etc/named.conf
+
+	sed -i '/recursion yes;/a # BEGIN google-dns-servers-as-forwarders\n\n        forwarders {\n                8.8.8.8;\n                8.8.4.4;\n        };\n\n        dnssec-validation no;\n# END google-dns-servers-as-forwarders' /etc/named.conf
+
+	sudo cat >> /etc/named.conf << EOF
+# BEGIN zones-of-${v_given_domain}-domain
+# ${v_given_domain} zones-are-managed-by-dnsmanager
+//Forward Zone for ${v_given_domain}
+zone "${v_given_domain}" IN {
+           type master;
+           file "zone-files/${v_given_domain}-forward.db";
+           allow-update { none; };
+};
+//Reverse Zones ms.local
+EOF
+	
+	for v_subnet_part in ${v_splited_subnets}
+	do
+		v_reverse_subnet_part=$(echo "${v_subnet_part}" | awk -F. '{print $3"."$2"."$1}')
+		sudo cat >> /etc/named.conf << EOF
+zone "${v_reverse_subnet_part}.in-addr.arpa" IN {
+             type master;
+             file "zone-files/${v_subnet_part}.${v_given_domain}-reverse.db";
+             allow-update { none; };
+};
+EOF
+	done
+
+	echo "# END zones-of-${v_given_domain}-domain" >> /etc/named.conf
+
+	echo -ne "${v_GREEN}[ done ]${v_RESET}"
+
+	echo -e "\n${v_CYAN}Creating and configuring zone files . . . ${v_RESET}"
+
+	sudo mkdir -p "${var_zone_dir}"
+
+	fn_update_dns_server_data_to_zone_file() {
+		v_file_name="${1}"
+		sudo cat >> ${v_file_name} << EOF
+\$TTL 86400
+@   IN  SOA  ${v_dns_host_short_name}.${v_given_domain}. root.${v_given_domain}. (
+        1	;Serial
+        3600	;Refresh
+        1800	;Retry
+        604800	;Expire
+        86400	;Minimum TTL
+)
+
+;Name Server Information
+@ IN NS ${v_dns_host_short_name}.${v_given_domain}.
+EOF
+	}
+
+	v_zone_file_name="${var_zone_dir}/${v_given_domain}-forward.db"
+
+	fn_update_dns_server_data_to_zone_file "${v_zone_file_name}"
+	echo "\n;A-Records" >> "${v_zone_file_name}"
+
+	v_gateway_adjusted_space=$(printf "%-*s" 63 "gateway")
+
+	echo "${v_gateway_adjusted_space} IN A ${v_subnet1}.1" >> "${v_zone_file_name}"
+
+	v_dns_host_short_name_adjusted_space=$(printf "%-*s" 63 "${v_dns_host_short_name}")
+	
+	echo "${v_dns_host_short_name_adjusted_space} IN A ${v_primary_ip}" >> "${v_zone_file_name}"
+
+	for v_subnet_part in ${v_splited_subnets}
+	do
+		v_zone_file_name="${var_zone_dir}/${v_subnet_part}.${v_given_domain}-reverse.db"
+		fn_update_dns_server_data_to_zone_file "${v_zone_file_name}"
+		echo "\n;PTR-Records" >> "${v_zone_file_name}"
+		if [[ "${v_subnet_part}" == "${v_subnet1}" ]]
+		then
+			echo "1   IN gateway.${v_given_domain}." >> "${v_zone_file_name}"
+			v_get_ip_part_primary_ip=$(echo "${v_primary_ip}" | awk -F. '{print $4}')
+			echo "${v_get_ip_part_primary_ip}   IN PTR ${v_dns_host_short_name}.${v_given_domain}."  >> "${v_zone_file_name}"
+		fi
+	done
+
+	echo -ne "${v_GREEN}[ done ]${v_RESET}"
+
+	echo -e "\n${v_CYAN}Updating Network Manager to point the local dns server and domain . . . ${v_RESET}"
+
+	v_active_connection_name=$(sudo nmcli connection show --active | grep "${v_primary_interface}" | head -n 1 | awk '{ print $1 }')
+
+	sudo nmcli connection modify "${v_active_connection_name}" ipv4.dns-search "${v_given_domain}" &>/dev/null
+
+	sudo nmcli connection modify "${v_active_connection_name}" ipv4.dns "127.0.0.1,8.8.8.8,8.8.4.4"  &>/dev/null
+
+	sudo nmcli connection reload "${v_active_connection_name}" &>/dev/null
+
+	sudo nmcli connection up "${v_active_connection_name}" &>/dev/null
+
+	echo -ne "${v_GREEN}[ done ]${v_RESET}"
+
+	echo -e "\n${v_GREEN}All done! Your domain \"${v_given_domain}\" with DNS server ${v_primary_ip} [ ${v_dns_host_short_name}.${v_given_domain}  ] has been configured.${v_RESET}"
+	echo -e "${v_YELLOW}Now you could manage the domain  \"${v_given_domain}\" with dnsmanager utility from command line.\n${v_RESET}"
+
+	sudo cp -p $(pwd)/$0 /usr/local/bin/dnsmanager
+
+	exit
 }
+
 
 fn_get_host_record() {
 	v_input_host="${1}"
@@ -858,42 +998,53 @@ fn_handle_multiple_host_record() {
 	rm -f "${v_tmp_file_dnsmanager}"
 }
 
+
 fn_main_menu() {
 cat << EOF
-Manage DNS host records with ${v_domain_name} domain,
-0) Configure local dns server and domain if not done already
-1) Create a DNS host record
-2) Delete a DNS host record
-3) Rename an existing DNS host record
-4) Create multiple DNS host records provided in a file
-5) Delete multiple DNS host records provided in a file
-q) Quit without any changes
-
+################################################################
+Manage Domain : $(if [ ! -z "${v_domain_name}" ];then echo -n "${v_domain_name}";else '[not-yet-configured]';fi)
+---------------------------------------------------------------#
+1) Create a DNS host record                                    #
+2) Delete a DNS host record                                    #
+3) Rename an existing DNS host record                          #
+4) Create multiple DNS host records provided in a file         #
+5) Delete multiple DNS host records provided in a file         #
+---------------------------------------------------------------#
+0) Configure local dns server and domain if not done already   #
+---------------------------------------------------------------#
+q) Quit without any changes                                    #
+---------------------------------------------------------------#
 EOF
 
 read -p "Please Select an Option from Above : " var_function
 
 case ${var_function} in
-	0) 	fn_configure_named_dns_server
+	0) 	
+		fn_configure_named_dns_server
 		exit
 		;;
 	1)
+		fn_check_existence_of_domain
 		fn_create_host_record
 		exit
 		;;
 	2)
+		fn_check_existence_of_domain
 		fn_delete_host_record
 		exit
 		;;
 	3)
+		fn_check_existence_of_domain
 		fn_rename_host_record
 		exit
 		;;
 	4)
+		fn_check_existence_of_domain
 		fn_handle_multiple_host_record "${2}" "create"
 		exit
 		;;
 	5)
+		fn_check_existence_of_domain
 		fn_handle_multiple_host_record "${2}" "delete"
 		exit
 		;;
@@ -910,31 +1061,38 @@ esac
 
 if [ ! -z "${1}" ]
 then
+
 	case "${1}" in
 		-c)
+			fn_check_existence_of_domain
 			fn_create_host_record "${2}"
 			exit
 			;;
 		-d)
+			fn_check_existence_of_domain
 			fn_delete_host_record "${2}"
 			exit
 			;;
 		-r)
+			fn_check_existence_of_domain
 			fn_rename_host_record "${2}"
 			exit
 			;;
 		-cf)
+			fn_check_existence_of_domain
 			fn_handle_multiple_host_record "${2}" "create"
 			exit
 			;;
 		-df)
+			fn_check_existence_of_domain
 			fn_handle_multiple_host_record "${2}" "delete"
 			exit
 			;;
 
-		--deploy) fn_configure_named_dns_server
-			  exit
-			  ;;
+		--deploy)
+			fn_configure_named_dns_server
+			exit
+			;;
 
 		*)
 			if [[ ! "${1}" =~ ^-h|--help$ ]]
