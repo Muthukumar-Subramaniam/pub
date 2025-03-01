@@ -14,10 +14,13 @@ v_get_win_hostname="windows"
 v_get_rhel_activation_key=$(cat /scripts_by_muthu/server/rhel-activation-key.base64 | base64 -d)
 v_get_time_of_last_update=$(date | sed  "s/ /-/g")
 
-if ! sudo -l | grep NOPASSWD &> /dev/null
+if [[ "${UID}" -ne 0 ]]
 then
-	echo -e "\nYou need sudo access without password to run this script ! \n"
-	exit
+	if ! sudo -l | grep NOPASSWD &> /dev/null
+	then
+		echo -e "${v_RED}\nYou need sudo access without password or root access to run ${0} ! ${v_RESET}\n"
+		exit
+	fi
 fi
 
 while :

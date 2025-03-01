@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Define color codes
 v_RED='\033[0;31m'      # Red
 v_GREEN='\033[0;32m'    # Green
@@ -9,13 +8,10 @@ v_CYAN='\033[0;36m'     # Cyan
 v_MAGENTA='\033[0;35m'  # Magenta
 v_RESET='\033[0m'       # Reset to default color
 
-if [[ "${UID}" -ne 0 ]]
+if ! sudo -l | grep NOPASSWD &> /dev/null
 then
-	if ! sudo -l | grep NOPASSWD &> /dev/null
-	then
-		echo -e "${v_RED}\nYou need sudo access without password or root access to run ${0} ! ${v_RESET}\n"
-		exit
-	fi
+	echo -e "${v_RED}\nYou need sudo access without password to run this script! ${v_RESET}\n"
+	exit
 fi
 
 v_domain_name=$(if [ -f /etc/named.conf ];then sudo grep 'zones-are-managed-by-dnsmanager' /etc/named.conf | awk '{print $2}';fi)
@@ -752,7 +748,9 @@ fn_rename_host_record() {
 
 	fn_set_ptr_zone
 
-	v_host_record_rename=$(printf "%-*s" 63 "${v_rename_record}")
+	v_target_length=39
+	v_num_spaces=$(( v_target_length - ${#v_rename_record} ))
+	v_host_record_rename="${v_rename_record}$(printf '%*s' "$v_num_spaces")"
 	v_host_record_rename=$(echo "$v_host_record_rename IN A ${v_current_ip_of_host_record}")
 	
 	while :
@@ -790,8 +788,6 @@ fn_rename_host_record() {
 }
 
 fn_handle_multiple_host_record() {		
-
-	touch /tmp/dnsmanager_fn_handle_multiple_host_record.lock
 
 	v_host_list_file="${1}"
 	v_action_required="${2}"
@@ -1009,8 +1005,6 @@ fn_handle_multiple_host_record() {
 	echo
 	
 	rm -f "${v_tmp_file_dnsmanager}"
-
-	rm -f /tmp/dnsmanager_fn_handle_multiple_host_record.lock
 }
 
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-for v_k8s_host in k8s-{cp1,w{1,2}}.ms.local
+for v_k8s_host in k8s-{w{1,2},cp1}.ms.local
 do
 	if ! nc -vzw1 ${v_k8s_host} 22 &>/dev/null
 	then
