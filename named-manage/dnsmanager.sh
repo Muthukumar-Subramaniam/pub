@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [[ "${UID}" -ne 0 ]]
+then
+    echo -e "${v_RED}\nRun with sudo or run from root account ! ${v_RESET}\n"
+    exit 1
+fi
+
 # Define color codes
 v_RED='\033[0;31m'      # Red
 v_GREEN='\033[0;32m'    # Green
@@ -9,16 +15,7 @@ v_CYAN='\033[0;36m'     # Cyan
 v_MAGENTA='\033[0;35m'  # Magenta
 v_RESET='\033[0m'       # Reset to default color
 
-if [[ "${UID}" -ne 0 ]]
-then
-	if ! sudo -l | grep NOPASSWD &> /dev/null
-	then
-		echo -e "${v_RED}\nYou need sudo access without password or root access to run ${0} ! ${v_RESET}\n"
-		exit
-	fi
-fi
-
-v_domain_name=$(if [ -f /etc/named.conf ];then sudo grep 'zones-are-managed-by-dnsmanager' /etc/named.conf | awk '{print $2}';fi)
+v_domain_name=$(if [ -f /etc/named.conf ];then grep 'zones-are-managed-by-dnsmanager' /etc/named.conf | awk '{print $2}';fi)
 
 fn_check_existence_of_domain() {
 	if [ -z "${v_domain_name}" ]
@@ -149,7 +146,7 @@ fn_configure_named_dns_server() {
 
 	echo -ne "\n${v_CYAN}Checking whether required bind dns packages are installed . . . ${v_RESET}"
 
-	if sudo rpm -q bind bind-utils &>/dev/null 
+	if rpm -q bind bind-utils &>/dev/null 
 	then
 		echo -e "${v_GREEN}[ already installed ]${v_RESET}"
 	else
@@ -157,7 +154,7 @@ fn_configure_named_dns_server() {
 
 		echo -ne "\n${v_CYAN}Installing the required bind dns packages . . . ${v_RESET}"
 
-		if sudo dnf install bind bind-utils -y &>/dev/null
+		if dnf install bind bind-utils -y &>/dev/null
 		then
 			echo -e "${v_GREEN}[ installed ]${v_RESET}"
 		else
@@ -169,21 +166,21 @@ fn_configure_named_dns_server() {
 
 	echo -ne "\n${v_CYAN}Taking backup of named.conf . . . ${v_RESET}"
 
-	sudo cp -p /etc/named.conf /etc/named.conf_bkp_by_dnsmanager
+	cp -p /etc/named.conf /etc/named.conf_bkp_by_dnsmanager
 	
 	echo -e "${v_GREEN}[ done ]${v_RESET}"
 
 	echo -ne "\n${v_CYAN}Configuring named.conf . . . ${v_RESET}"
 
-	sudo sed -i "s/listen-on port 53 {\s*127.0.0.1;\s*};/listen-on port 53 { 127.0.0.1; ${v_primary_ip}; };/" /etc/named.conf
+	sed -i "s/listen-on port 53 {\s*127.0.0.1;\s*};/listen-on port 53 { 127.0.0.1; ${v_primary_ip}; };/" /etc/named.conf
 
-	sudo sed -i "s/allow-query\s*{\s*localhost;\s*};/allow-query     { localhost; ${v_network}\/${v_cidr}; };/" /etc/named.conf
+	sed -i "s/allow-query\s*{\s*localhost;\s*};/allow-query     { localhost; ${v_network}\/${v_cidr}; };/" /etc/named.conf
 
-	sudo sed -i '/dnssec-validation yes;/d' /etc/named.conf
+	sed -i '/dnssec-validation yes;/d' /etc/named.conf
 
-	sudo sed -i '/recursion yes;/a # BEGIN google-dns-servers-as-forwarders\n\n        forwarders {\n                8.8.8.8;\n                8.8.4.4;\n        };\n\n        dnssec-validation no;\n# END google-dns-servers-as-forwarders' /etc/named.conf
+	sed -i '/recursion yes;/a # BEGIN google-dns-servers-as-forwarders\n\n        forwarders {\n                8.8.8.8;\n                8.8.4.4;\n        };\n\n        dnssec-validation no;\n# END google-dns-servers-as-forwarders' /etc/named.conf
 
-	sudo tee -a /etc/named.conf > /dev/null << EOF
+	tee -a /etc/named.conf > /dev/null << EOF
 # BEGIN zones-of-${v_given_domain}-domain
 # ${v_given_domain} zones-are-managed-by-dnsmanager
 //Forward Zone for ${v_given_domain}
@@ -198,7 +195,7 @@ EOF
 	for v_subnet_part in ${v_splited_subnets}
 	do
 		v_reverse_subnet_part=$(echo "${v_subnet_part}" | awk -F. '{print $3"."$2"."$1}')
-		sudo tee -a /etc/named.conf > /dev/null << EOF
+		tee -a /etc/named.conf > /dev/null << EOF
 zone "${v_reverse_subnet_part}.in-addr.arpa" IN {
              type master;
              file "zone-files/${v_subnet_part}.${v_given_domain}-reverse.db";
@@ -207,17 +204,17 @@ zone "${v_reverse_subnet_part}.in-addr.arpa" IN {
 EOF
 	done
 
-	echo -e "# END zones-of-${v_given_domain}-domain" | sudo tee -a /etc/named.conf > /dev/null
+	echo -e "# END zones-of-${v_given_domain}-domain" | tee -a /etc/named.conf > /dev/null
 
 	echo -e "${v_GREEN}[ done ]${v_RESET}"
 
 	echo -ne "\n${v_CYAN}Creating and configuring zone files . . . ${v_RESET}"
 
-	sudo mkdir -p "${var_zone_dir}"
+	mkdir -p "${var_zone_dir}"
 
 	fn_update_dns_server_data_to_zone_file() {
 		v_file_name="${1}"
-		sudo tee -a "${v_file_name}" > /dev/null << EOF
+		tee -a "${v_file_name}" > /dev/null << EOF
 \$TTL 86400
 @   IN  SOA  ${v_dns_host_short_name}.${v_given_domain}. root.${v_given_domain}. (
         1	;Serial
@@ -235,27 +232,27 @@ EOF
 	v_zone_file_name="${var_zone_dir}/${v_given_domain}-forward.db"
 
 	fn_update_dns_server_data_to_zone_file "${v_zone_file_name}"
-	echo -e "\n;A-Records" | sudo tee -a "${v_zone_file_name}" > /dev/null
+	echo -e "\n;A-Records" | tee -a "${v_zone_file_name}" > /dev/null
 
 	v_gateway_adjusted_space=$(printf "%-*s" 63 "gateway")
 
-	echo -e "${v_gateway_adjusted_space} IN A ${v_subnet1}.1" | sudo tee -a  "${v_zone_file_name}" > /dev/null
+	echo -e "${v_gateway_adjusted_space} IN A ${v_subnet1}.1" | tee -a  "${v_zone_file_name}" > /dev/null
 
 	v_dns_host_short_name_adjusted_space=$(printf "%-*s" 63 "${v_dns_host_short_name}")
 	
-	echo -e "${v_dns_host_short_name_adjusted_space} IN A ${v_primary_ip}" | sudo tee -a "${v_zone_file_name}" > /dev/null
+	echo -e "${v_dns_host_short_name_adjusted_space} IN A ${v_primary_ip}" | tee -a "${v_zone_file_name}" > /dev/null
 
 	for v_subnet_part in ${v_splited_subnets}
 	do
 		v_zone_file_name="${var_zone_dir}/${v_subnet_part}.${v_given_domain}-reverse.db"
 		fn_update_dns_server_data_to_zone_file "${v_zone_file_name}"
-		echo -e "\n;PTR-Records" | sudo tee -a "${v_zone_file_name}" > /dev/null
+		echo -e "\n;PTR-Records" | tee -a "${v_zone_file_name}" > /dev/null
 		if [[ "${v_subnet_part}" == "${v_subnet1}" ]]
 		then
-			echo -e "1   IN PTR gateway.${v_given_domain}." | sudo tee -a "${v_zone_file_name}" > /dev/null
+			echo -e "1   IN PTR gateway.${v_given_domain}." | tee -a "${v_zone_file_name}" > /dev/null
 			v_get_ip_part_primary_ip=$(echo "${v_primary_ip}" | awk -F. '{print $4}')
 			v_ip_part_primary_ip_adjusted_space=$(printf "%-*s" 3 "${v_get_ip_part_primary_ip}")
-			echo -e "${v_ip_part_primary_ip_adjusted_space} IN PTR ${v_dns_host_short_name}.${v_given_domain}." | sudo tee -a "${v_zone_file_name}" > /dev/null
+			echo -e "${v_ip_part_primary_ip_adjusted_space} IN PTR ${v_dns_host_short_name}.${v_given_domain}." | tee -a "${v_zone_file_name}" > /dev/null
 		fi
 	done
 
@@ -263,28 +260,28 @@ EOF
 
 	echo -ne "\n${v_CYAN}Enabling and Starting named DNS Service . . . ${v_RESET}"
 
-	sudo systemctl enable --now named &>/dev/null	
+	systemctl enable --now named &>/dev/null	
 
 	echo -e "${v_GREEN}[ done ]${v_RESET}"
 
 	echo -ne "\n${v_CYAN}Updating Network Manager to point the local dns server and domain . . . ${v_RESET}"
 
-	v_active_connection_name=$(sudo nmcli connection show --active | grep "${v_primary_interface}" | head -n 1 | awk '{ print $1 }')
+	v_active_connection_name=$(nmcli connection show --active | grep "${v_primary_interface}" | head -n 1 | awk '{ print $1 }')
 
-	sudo nmcli connection modify "${v_active_connection_name}" ipv4.dns-search "${v_given_domain}" &>/dev/null
+	nmcli connection modify "${v_active_connection_name}" ipv4.dns-search "${v_given_domain}" &>/dev/null
 
-	sudo nmcli connection modify "${v_active_connection_name}" ipv4.dns "127.0.0.1,8.8.8.8,8.8.4.4"  &>/dev/null
+	nmcli connection modify "${v_active_connection_name}" ipv4.dns "127.0.0.1,8.8.8.8,8.8.4.4"  &>/dev/null
 
-	sudo nmcli connection reload "${v_active_connection_name}" &>/dev/null
+	nmcli connection reload "${v_active_connection_name}" &>/dev/null
 
-	sudo nmcli connection up "${v_active_connection_name}" &>/dev/null
+	nmcli connection up "${v_active_connection_name}" &>/dev/null
 
 	echo -e "${v_GREEN}[ done ]${v_RESET}"
 
 	echo -e "\n${v_GREEN}All done! Your domain \"${v_given_domain}\" with DNS server ${v_primary_ip} [ ${v_dns_host_short_name}.${v_given_domain}  ] has been configured.${v_RESET}"
 	echo -e "${v_YELLOW}Now you could manage the domain  \"${v_given_domain}\" with dnsmanager utility from command line.\n${v_RESET}"
 
-	sudo cp -p $(pwd)/$0 /usr/local/bin/dnsmanager
+	cp -p $(pwd)/$0 /usr/local/bin/dnsmanager
 
 	exit
 }
@@ -377,7 +374,7 @@ fn_get_host_record() {
 		fn_get_host_record_from_user
 	fi
 
-	if sudo grep "^${v_host_record} "  "${v_fw_zone}" &>/dev/null
+	if grep "^${v_host_record} "  "${v_fw_zone}" &>/dev/null
 	then 
 		if [[ "${v_action_requested}" == "create" ]]
 		then
@@ -389,7 +386,7 @@ fn_get_host_record() {
 		then
 			fn_get_host_record_from_user
 
-			if sudo grep "^${v_rename_record} "  "${v_fw_zone}" &>/dev/null
+			if grep "^${v_rename_record} "  "${v_fw_zone}" &>/dev/null
 			then 
 				echo -e "\n${v_RED}Conflict ! Existing host record found for ${v_rename_record}.${v_domain_name} ! ${v_RESET}\n"
 				echo -e "${v_RED}Nothing to do ! Exiting !  ${v_RESET}\n"
@@ -415,13 +412,13 @@ fn_update_serial_number_of_zones() {
 
 	${v_if_autorun_false} && echo -ne "\n${v_CYAN}Updating serial numbers of zone files . . . ${v_RESET}"
 
-	v_current_serial_fw_zone=$(sudo grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
+	v_current_serial_fw_zone=$(grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
 	v_set_new_serial_fw_zone=$(( v_current_serial_fw_zone + 1 ))
-	sudo sed -i "/;Serial/s/${v_current_serial_fw_zone}/${v_set_new_serial_fw_zone}/g" "${v_fw_zone}"
+	sed -i "/;Serial/s/${v_current_serial_fw_zone}/${v_set_new_serial_fw_zone}/g" "${v_fw_zone}"
 
-	v_current_serial_ptr_zone=$(sudo grep ';Serial' "${v_ptr_zone}" | cut -d ";" -f 1 | tr -d '[:space:]')
+	v_current_serial_ptr_zone=$(grep ';Serial' "${v_ptr_zone}" | cut -d ";" -f 1 | tr -d '[:space:]')
 	v_set_new_serial_ptr_zone=$(( v_current_serial_ptr_zone + 1 ))
-	sudo sed -i "/;Serial/s/${v_current_serial_ptr_zone}/${v_set_new_serial_ptr_zone}/g" "${v_ptr_zone}"
+	sed -i "/;Serial/s/${v_current_serial_ptr_zone}/${v_set_new_serial_ptr_zone}/g" "${v_ptr_zone}"
 
 	${v_if_autorun_false} && echo -ne "${v_GREEN}[ done ]${v_RESET}\n"
 }
@@ -431,9 +428,9 @@ fn_reload_named_dns_service() {
 
 	echo -ne "\n${v_CYAN}Reloading the DNS service ( named ) . . . ${v_RESET}"
 
-	sudo systemctl reload named &>/dev/null
+	systemctl reload named &>/dev/null
 
-	if sudo systemctl is-active named &>/dev/null;
+	if systemctl is-active named &>/dev/null;
 	then 
 		echo -ne "${v_GREEN}[ ok ]${v_RESET}\n"
 	else
@@ -544,7 +541,7 @@ fn_create_host_record() {
 		local v_start_ip="${2}"
 		local v_max_ip="${3}"
 		local v_subnet="${4}"
-		local v_capture_list_of_ips=$(sudo sed -n 's/^\([0-9]\+\).*/\1/p' "${v_file_ptr_zone}")
+		local v_capture_list_of_ips=$(sed -n 's/^\([0-9]\+\).*/\1/p' "${v_file_ptr_zone}")
 		declare -A v_existing_ips
 
 		if [ -z "${v_capture_list_of_ips}" ]
@@ -578,7 +575,7 @@ fn_create_host_record() {
 		
 	for ((v_zone_number=1; v_zone_number<=v_total_ptr_zones; v_zone_number++))
 	do
-		eval "v_total_ips_in_ptr_zone${v_zone_number}=\$(sudo sed -n 's/^\([0-9]\+\).*/\1/p' \"\${v_ptr_zone${v_zone_number}}\" | wc -l)"
+		eval "v_total_ips_in_ptr_zone${v_zone_number}=\$(sed -n 's/^\([0-9]\+\).*/\1/p' \"\${v_ptr_zone${v_zone_number}}\" | wc -l)"
 
 		v_total_ips_in_current_zone=$(eval "echo \${v_total_ips_in_ptr_zone${v_zone_number}}")
 
@@ -628,9 +625,9 @@ fn_create_host_record() {
 
 	if [[ "${v_previous_ip}" == ';PTR-Records' ]]
 	then
-		echo "${v_add_host_record}" | sudo tee -a "${v_fw_zone}" &>/dev/null
+		echo "${v_add_host_record}" | tee -a "${v_fw_zone}" &>/dev/null
 	else
-		sudo sed -i "/${v_previous_ip}$/a \\${v_add_host_record}" "${v_fw_zone}"
+		sed -i "/${v_previous_ip}$/a \\${v_add_host_record}" "${v_fw_zone}"
 	fi
 
 	##################  End of  A Record Create Section ############################
@@ -645,9 +642,9 @@ fn_create_host_record() {
 
 	if [[ "${v_previous_ip}" == ';PTR-Records' ]]
 	then
-		echo "${v_add_ptr_record}" | sudo tee -a "${v_ptr_zone}" &>/dev/null
+		echo "${v_add_ptr_record}" | tee -a "${v_ptr_zone}" &>/dev/null
 	else
-		sudo sed -i "/^${v_host_part_of_previous_ip} /a\\${v_add_ptr_record}" "${v_ptr_zone}"
+		sed -i "/^${v_host_part_of_previous_ip} /a\\${v_add_ptr_record}" "${v_ptr_zone}"
 	fi
 
 	############# End of PTR Record Create Section #######################
@@ -682,8 +679,8 @@ fn_delete_host_record() {
 		return ${v_exit_status_fn_get_host_record}
 	fi
 
-	v_capture_host_record=$(sudo grep "^${v_host_record} " "${v_fw_zone}" ) 
-	v_current_ip_of_host_record=$(sudo grep "^${v_host_record} " ${v_fw_zone} | awk '{print $NF}' | tr -d '[:space:]')
+	v_capture_host_record=$(grep "^${v_host_record} " "${v_fw_zone}" ) 
+	v_current_ip_of_host_record=$(grep "^${v_host_record} " ${v_fw_zone} | awk '{print $NF}' | tr -d '[:space:]')
 	v_capture_ptr_prefix=$(awk -F. '{ print $4 }' <<< ${v_current_ip_of_host_record} )
 
 	fn_set_ptr_zone
@@ -702,8 +699,8 @@ fn_delete_host_record() {
 		then
 			${v_if_autorun_false} && echo -ne "\n${v_CYAN}Deleting host record ${v_host_record}.${v_domain_name} . . . ${v_RESET}"
 
-			sudo sed -i "/^${v_capture_ptr_prefix} /d" "${v_ptr_zone}"
-			sudo sed -i "/^${v_capture_host_record}/d" "${v_fw_zone}"
+			sed -i "/^${v_capture_ptr_prefix} /d" "${v_ptr_zone}"
+			sed -i "/^${v_capture_host_record}/d" "${v_fw_zone}"
 
 			${v_if_autorun_false} && echo -ne "${v_GREEN}[ done ]${v_RESET}\n"
 
@@ -747,8 +744,8 @@ fn_rename_host_record() {
 		return ${v_exit_status_fn_get_host_record}
 	fi
 
-	v_host_record_exist=$(sudo grep "^$v_host_record " $v_fw_zone)
-	v_current_ip_of_host_record=$(sudo grep "^$v_host_record " $v_fw_zone | cut -d "A" -f 2 | tr -d '[[:space:]]')
+	v_host_record_exist=$(grep "^$v_host_record " $v_fw_zone)
+	v_current_ip_of_host_record=$(grep "^$v_host_record " $v_fw_zone | cut -d "A" -f 2 | tr -d '[[:space:]]')
 
 	fn_set_ptr_zone
 
@@ -762,8 +759,8 @@ fn_rename_host_record() {
 		then
 			echo -ne "\n${v_CYAN}Renaming host record ${v_host_record}.${v_domain_name} to ${v_rename_record}.${v_domain_name} . . . ${v_RESET}"
 
-			sudo sed -i "s/${v_host_record_exist}/${v_host_record_rename}/g" ${v_fw_zone}
-			sudo sed -i "s/${v_host_record}.${v_domain_name}./${v_rename_record}.${v_domain_name}./g" ${v_ptr_zone}
+			sed -i "s/${v_host_record_exist}/${v_host_record_rename}/g" ${v_fw_zone}
+			sed -i "s/${v_host_record}.${v_domain_name}./${v_rename_record}.${v_domain_name}./g" ${v_ptr_zone}
 
 			echo -ne "${v_GREEN}[ done ]${v_RESET}\n"
 			
@@ -861,7 +858,7 @@ fn_handle_multiple_host_record() {
 	v_count_successfull=0
 	v_count_failed=0
 	
-	v_pre_execution_serial_fw_zone=$(sudo grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
+	v_pre_execution_serial_fw_zone=$(grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
 	
 	v_total_host_records=$(wc -l < "${v_host_list_file}")
 	
@@ -885,7 +882,7 @@ fn_handle_multiple_host_record() {
 	
 		echo -ne "\n\n${v_CYAN}Attempting to ${v_action_required} the host record ${v_host_record}.${v_domain_name} . . . ${v_RESET}"
 	
-		v_serial_fw_zone_pre_execution=$(sudo grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
+		v_serial_fw_zone_pre_execution=$(grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
 	
 		if [[ ${v_action_required} == "create" ]]
                 then
@@ -898,14 +895,14 @@ fn_handle_multiple_host_record() {
 			var_exit_status=${?}
 		fi
 	
-		v_serial_fw_zone_post_execution=$(sudo grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
+		v_serial_fw_zone_post_execution=$(grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
 	
 	        v_fqdn="${v_host_record}.${v_domain_name}"
 	
 	        
 		if [[ ${v_action_required} == "create" ]]
 		then
-			v_ip_address=$(sudo grep -w "^${v_host_record} "  "${v_fw_zone}" | awk '{print $NF}' | tr -d '[:space:]')
+			v_ip_address=$(grep -w "^${v_host_record} "  "${v_fw_zone}" | awk '{print $NF}' | tr -d '[:space:]')
 	
 			if [[ -z "${v_ip_address}" ]]; then
 	        		v_ip_address="N/A"
@@ -948,7 +945,7 @@ fn_handle_multiple_host_record() {
 			echo -ne "${v_failed}"
 			let v_count_failed++
 		else
-			v_serial_fw_zone_post_execution=$(sudo grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
+			v_serial_fw_zone_post_execution=$(grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
 	
 			if [[ "${v_serial_fw_zone_pre_execution}" -ne "${v_serial_fw_zone_post_execution}" ]]
 			then
@@ -975,15 +972,15 @@ fn_handle_multiple_host_record() {
 	
 	done < "${v_host_list_file}"
 
-	v_post_execution_serial_fw_zone=$(sudo grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
+	v_post_execution_serial_fw_zone=$(grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
 	
 	if [[ "${v_pre_execution_serial_fw_zone}" -ne "${v_post_execution_serial_fw_zone}" ]]
 	then
 		echo -e "\n\n${v_YELLOW}Reloading the DNS service ( named ) for the changes to take effect . . .${v_RESET}\n"
 	
-		sudo systemctl reload named &>/dev/null
+		systemctl reload named &>/dev/null
 	
-		if sudo systemctl is-active named &>/dev/null;
+		if systemctl is-active named &>/dev/null;
 		then 
 			echo -e "${v_GREEN}Reloaded, service  named is active and running. ${v_RESET}"
 		else

@@ -1,44 +1,44 @@
 #!/bin/bash
-v_dnsmanager='/scripts_by_muthu/server/named-manage/dnsmanager.sh'
-v_ks_manage_dir='/scripts_by_muthu/server/ks-manage'
-v_ks_manager_kickstarts_dir='/var/www/server.ms.local/ks-manager-kickstarts'
-v_get_ipv4_domain='ms.local'
-v_get_ipv4_netmask='255.255.252.0'
-v_get_ipv4_prefix='22'
-v_get_ipv4_gateway="192.168.168.1"
-v_get_ipv4_nameserver="192.168.168.3"
-v_get_tftp_server_name="server"
-v_get_ntp_pool_name="server"
-v_get_web_server_name="server"
-v_get_win_hostname="windows"
-v_get_rhel_activation_key=$(cat /scripts_by_muthu/server/rhel-activation-key.base64 | base64 -d)
-v_get_time_of_last_update=$(date | sed  "s/ /-/g")
 
 if [[ "${UID}" -ne 0 ]]
 then
-	if ! sudo -l | grep NOPASSWD &> /dev/null
-	then
-		echo -e "${v_RED}\nYou need sudo access without password or root access to run ${0} ! ${v_RESET}\n"
-		exit
-	fi
+    echo -e "${v_RED}\nRun with sudo or run from root account ! ${v_RESET}\n"
+    exit 1
 fi
+
+dnsmanager_script='/scripts_by_muthu/server/named-manage/dnsmanager.sh'
+ksmanager_main_dir='/scripts_by_muthu/server/ks-manage'
+ksmanager_hub_dir='/var/www/server.ms.local/ksmanager-hub'
+ipv4_domain='ms.local'
+ipv4_netmask='255.255.252.0'
+ipv4_prefix='22'
+ipv4_gateway="192.168.168.1"
+ipv4_nameserver="192.168.168.3"
+ipv4_nfsserver="192.168.168.3"
+tftp_server_name="server"
+ntp_pool_name="server"
+web_server_name="server"
+win_kickstart_hostname="windows"
+rhel_activation_key=$(cat /scripts_by_muthu/server/rhel-activation-key.base64 | base64 -d)
+time_of_last_update=$(date | sed  "s/ /-/g")
+
 
 while :
 do
 	# shellcheck disable=SC2162
 	if [ -z "${1}" ]
 	then
-		echo -e "Create Kickstart Host Profiles for PXE-boot in \"${v_get_ipv4_domain}\" domain,\n"
+		echo -e "Create Kickstart Host Profiles for PXE-boot in \"${ipv4_domain}\" domain,\n"
 		echo "Points to Keep in Mind While Entering the Hostname:"
 		echo " * Please use only letters, numbers, and hyphens."
 		echo " * Please do not start with a number."
-		echo -e " * Please do not append the domain name \"${v_get_ipv4_domain}\" \n"
-		read -r -p "Please Enter the Hostname for which Kickstarts are required : " v_get_hostname
+		echo -e " * Please do not append the domain name \"${ipv4_domain}\" \n"
+		read -r -p "Please Enter the Hostname for which Kickstarts are required : " kickstart_hostname
 	else
-		v_get_hostname="${1}"
+		kickstart_hostname="${1}"
 	fi
 
-	if [[ ${v_get_hostname} =~ ^[[:alpha:]]([-[:alnum:]]*)$ ]]
+	if [[ ${kickstart_hostname} =~ ^[[:alpha:]]([-[:alnum:]]*)$ ]]
 	then
     		break
   	else
@@ -46,30 +46,30 @@ do
 		echo "FYI:"
 		echo "	1. Please use only letters, numbers, and hyphens."
 		echo "	2. Please do not start with a number."
-		echo -e "	3. Please do not append the domain name ${v_get_ipv4_domain} \n"
+		echo -e "	3. Please do not append the domain name ${ipv4_domain} \n"
   	fi
 done
 
-if ! host "${v_get_hostname}" &>/dev/null
+if ! host "${kickstart_hostname}" &>/dev/null
 then
-	echo -e "\nNo DNS record found for \"${v_get_hostname}\"\n"	
+	echo -e "\nNo DNS record found for \"${kickstart_hostname}\"\n"	
 	while :
 	do
-		read -r -p "Enter (y) to create DNS record for ${v_get_hostname} or (n) to exit the script : " v_confirmation
+		read -r -p "Enter (y) to create DNS record for ${kickstart_hostname} or (n) to exit the script : " v_confirmation
 
 		if [[ "${v_confirmation}" == "y" ]]
 		then
-			echo -e "\nExecuting the script ${v_dnsmanager} . . .\n"
-			"${v_dnsmanager}" -c "${v_get_hostname}"
+			echo -e "\nExecuting the script ${dnsmanager_script} . . .\n"
+			"${dnsmanager_script}" -c "${kickstart_hostname}"
 
-			if host "${v_get_hostname}" &>/dev/null
+			if host "${kickstart_hostname}" &>/dev/null
 			then
-				echo -e "\nDNS Record for ${v_get_hostname} created successfully! "
-				echo "FYI: $(host ${v_get_hostname})"
+				echo -e "\nDNS Record for ${kickstart_hostname} created successfully! "
+				echo "FYI: $(host ${kickstart_hostname})"
 				echo -e "\nProceeding further . . .\n"
 				break
 			else
-				echo -e "\nSomething went wrong while creating ${v_get_hostname} !\n"
+				echo -e "\nSomething went wrong while creating ${kickstart_hostname} !\n"
 				exit
 			fi
 
@@ -85,17 +85,17 @@ then
 		fi
 	done
 else
-	echo -e "\nDNS Record found for ${v_get_hostname}!\n"
-	echo "FYI: $(host ${v_get_hostname})"
+	echo -e "\nDNS Record found for ${kickstart_hostname}!\n"
+	echo "FYI: $(host ${kickstart_hostname})"
 
 fi
 
 # Function to validate MAC address
 fn_validate_mac() {
-    local var_get_mac_address="${1}"
+    local mac_address_of_host="${1}"
     
     # Regex for MAC address (allowing both colon and hyphen-separated)
-    if [[ "${var_get_mac_address}" =~ ^([a-fA-F0-9]{2}([-:]?)){5}[a-fA-F0-9]{2}$ ]]
+    if [[ "${mac_address_of_host}" =~ ^([a-fA-F0-9]{2}([-:]?)){5}[a-fA-F0-9]{2}$ ]]
     then
         return 0  # Valid MAC address
     else
@@ -109,16 +109,16 @@ fn_validate_mac() {
 fn_get_mac_address() {
 	while :
 	do
-    		printf "\nEnter MAC address of the VM ${v_get_hostname} : "
-		read var_get_mac_address
+    		printf "\nEnter MAC address of the VM ${kickstart_hostname} : "
+		read mac_address_of_host
     		# Call the function to validate the MAC address
-    		if fn_validate_mac "${var_get_mac_address}"
+    		if fn_validate_mac "${mac_address_of_host}"
     		then
 			# Convert MAC address to required format to append with grub.cfg file
-			var_grub_cfg_mac_address=$(echo "${var_get_mac_address}" | tr ':' '-' | tr 'A-F' 'a-f')
+			grub_cfg_mac_address=$(echo "${mac_address_of_host}" | tr ':' '-' | tr 'A-F' 'a-f')
 			echo -e "\nUpdating MAC address to mac-address-cache for future use . . .\n"
-			sed -i "/${v_get_hostname}/d" "${v_ks_manage_dir}"/mac-address-cache
-			echo "${v_get_hostname} ${var_get_mac_address}" >> "${v_ks_manage_dir}"/mac-address-cache
+			sed -i "/${kickstart_hostname}/d" "${ksmanager_main_dir}"/mac-address-cache
+			echo "${kickstart_hostname} ${mac_address_of_host}" >> "${ksmanager_main_dir}"/mac-address-cache
         		break
     		else
         		echo -e "\nInvalid MAC address provided. Please try again.\n"
@@ -126,26 +126,26 @@ fn_get_mac_address() {
 	done
 }
 
-echo -e "\nLooking up MAC Address for the host ${v_get_hostname} from mac-address-cache . . ."
+echo -e "\nLooking up MAC Address for the host ${kickstart_hostname} from mac-address-cache . . ."
 
-if grep ^"${v_get_hostname} " "${v_ks_manage_dir}"/mac-address-cache &>>/dev/null
+if grep ^"${kickstart_hostname} " "${ksmanager_main_dir}"/mac-address-cache &>>/dev/null
 then
-	var_get_mac_address=$(grep ^"${v_get_hostname} " "${v_ks_manage_dir}"/mac-address-cache | cut -d " " -f 2 )
-	echo -e "\nMAC Address ${var_get_mac_address} found for ${v_get_hostname} in mac-address-cache! \n" 
+	mac_address_of_host=$(grep ^"${kickstart_hostname} " "${ksmanager_main_dir}"/mac-address-cache | cut -d " " -f 2 )
+	echo -e "\nMAC Address ${mac_address_of_host} found for ${kickstart_hostname} in mac-address-cache! \n" 
 	while :
 	do
-		read -p "Has the MAC Address ${var_get_mac_address} been changed for ${v_get_hostname} (y/N) ? : " v_get_confirmation 
-		if [[ "${v_get_confirmation}" =~ ^[Nn]$ ]] 
+		read -p "Has the MAC Address ${mac_address_of_host} been changed for ${kickstart_hostname} (y/N) ? : " confirmation 
+		if [[ "${confirmation}" =~ ^[Nn]$ ]] 
 		then
-			var_grub_cfg_mac_address=$(echo "${var_get_mac_address}" | tr ':' '-' | tr 'A-F' 'a-f')
+			grub_cfg_mac_address=$(echo "${mac_address_of_host}" | tr ':' '-' | tr 'A-F' 'a-f')
 			break
 
-		elif [[ -z "${v_get_confirmation}" ]]
+		elif [[ -z "${confirmation}" ]]
 		then
-			var_grub_cfg_mac_address=$(echo "${var_get_mac_address}" | tr ':' '-' | tr 'A-F' 'a-f')
+			grub_cfg_mac_address=$(echo "${mac_address_of_host}" | tr ':' '-' | tr 'A-F' 'a-f')
 			break
 
-		elif [[ "${v_get_confirmation}" =~ ^[Yy]$ ]]
+		elif [[ "${confirmation}" =~ ^[Yy]$ ]]
 		then
 			fn_get_mac_address
 			break
@@ -154,93 +154,128 @@ then
 		fi
 	done
 else
-	echo -e "\nMAC Address for ${v_get_hostname} not found in mac-address-cache! " 
+	echo -e "\nMAC Address for ${kickstart_hostname} not found in mac-address-cache! " 
 	fn_get_mac_address
 fi
 
+fn_select_os_distro() {
+cat << EOF
+
+Please select OS distribution to install :
+	1 ) AlmaLinux Latest ( Uses Local Mirror for Installation )
+	2 ) Ubuntu Server Latest ( Requires Internet Connection )
+	3 ) OpenSuse Leap Latest ( Requires Internet Connection )
+
+EOF
+	read -p "Enter Option Number : " os_distribution
+
+	case ${os_distribution} in
+		1) os_distribution="almalinux"
+	   	   ;;
+		2) os_distribution="ubuntu"
+	   	   ;;
+		3) os_distribution="opensuse"
+	   	   ;;
+		*) echo "Invalid Option!"
+	   	   fn_select_os_distro
+	   	   ;;
+	esac
+}
+
+
+fn_select_os_distro
+
 # shellcheck disable=SC2021
-v_get_ipv4_address=$(host "${v_get_hostname}.${v_get_ipv4_domain}" | cut -d " " -f 4 | tr -d '[[:space:]]')
+ipv4_address=$(host "${kickstart_hostname}.${ipv4_domain}" | cut -d " " -f 4 | tr -d '[[:space:]]')
 
-mkdir -p "${v_ks_manager_kickstarts_dir}"
+mkdir -p "${ksmanager_hub_dir}"
 
-rsync -avPh --delete "${v_ks_manage_dir}"/addons-for-kickstarts/ "${v_ks_manager_kickstarts_dir}"/addons-for-kickstarts/
+rsync -avPh --delete "${ksmanager_main_dir}"/addons-for-kickstarts/ "${ksmanager_hub_dir}"/addons-for-kickstarts/
 
-rsync -avPh --delete "${v_ks_manage_dir}"/local-repo/ "${v_ks_manager_kickstarts_dir}"/local-repo/
+host_kickstart_dir="${ksmanager_hub_dir}/kickstarts/${kickstart_hostname}.${ipv4_domain}"
 
-rsync -avPh "${v_ks_manage_dir}"/grub-template-auto.cfg "${v_ks_manager_kickstarts_dir}"/
+mkdir -p "${host_kickstart_dir}"
 
-rsync -avPh "${v_ks_manage_dir}"/grub-template-manual.cfg "${v_ks_manager_kickstarts_dir}"/
+echo -e "\nGenerating kickstart for ${kickstart_hostname}.${ipv4_domain} under ${host_kickstart_dir} . . .\n"
 
-var_host_ks_profiles_dir="${v_ks_manager_kickstarts_dir}/host-profiles/${v_get_hostname}.${v_get_ipv4_domain}"
+rm -rf "${host_kickstart_dir}"/*
 
-mkdir -p "${var_host_ks_profiles_dir}"
+if [[ "${os_distribution}" == "almalinux" ]]; then
+	rsync -avPh "${ksmanager_main_dir}"/ks-templates/el-9-ks.cfg "${host_kickstart_dir}"/ 
+elif [[ "${os_distribution}" == "ubuntu" ]]; then
+	rsync -avPh --delete "${ksmanager_main_dir}"/ks-templates/ubuntu-24-04-ks "${host_kickstart_dir}"/
+elif [[ "${os_distribution}" == "opensuse" ]]; then
+	rsync -avPh "${ksmanager_main_dir}"/ks-templates/opensuse-15-autoinst.xml "${host_kickstart_dir}"/ 
+fi
 
-echo -e "\nGenerating kickstart profiles for ${v_get_hostname}.${v_get_ipv4_domain} under ${var_host_ks_profiles_dir} . . .\n"
-
-rsync -avPh --delete "${v_ks_manage_dir}"/ks-templates/ "${var_host_ks_profiles_dir}"/ 
 
 # shellcheck disable=SC2044
 fn_set_environment() {
-	local var_input_dir_or_file="${1}"
+	local input_dir_or_file="${1}"
+	local working_file=
 
 	fn_run_sed_command() {
-		local var_working_file="${1}"
-		sed -i "s/get_ipv4_address/${v_get_ipv4_address}/g" "${var_working_file}"
-		sed -i "s/get_ipv4_netmask/${v_get_ipv4_netmask}/g" "${var_working_file}"
-		sed -i "s/get_ipv4_prefix/${v_get_ipv4_prefix}/g" "${var_working_file}"
-    		sed -i "s/get_ipv4_gateway/${v_get_ipv4_gateway}/g" "${var_working_file}"
-		sed -i "s/get_ipv4_nameserver/${v_get_ipv4_nameserver}/g" "${var_working_file}"
-		sed -i "s/get_ipv4_domain/${v_get_ipv4_domain}/g" "${var_working_file}"
-    		sed -i "s/get_hostname/${v_get_hostname}/g" "${var_working_file}"
-		sed -i "s/get_ntp_pool_name/${v_get_ntp_pool_name}/g" "${var_working_file}"
-		sed -i "s/get_web_server_name/${v_get_web_server_name}/g" "${var_working_file}" 
-		sed -i "s/get_win_hostname/${v_get_win_hostname}/g" "${var_working_file}"
-		sed -i "s/get_tftp_server_name/${v_get_tftp_server_name}.ms.local/g" "${var_working_file}"
-		sed -i "s/get_rhel_activation_key/${v_get_rhel_activation_key}/g" "${var_working_file}"
-		sed -i "s/get_time_of_last_update/${v_get_time_of_last_update}/g" "${var_working_file}"
+		local working_file="${1}"
+		sed -i "s/get_ipv4_address/${ipv4_address}/g" "${working_file}"
+		sed -i "s/get_ipv4_netmask/${ipv4_netmask}/g" "${working_file}"
+		sed -i "s/get_ipv4_prefix/${ipv4_prefix}/g" "${working_file}"
+    		sed -i "s/get_ipv4_gateway/${ipv4_gateway}/g" "${working_file}"
+		sed -i "s/get_ipv4_nameserver/${ipv4_nameserver}/g" "${working_file}"
+		sed -i "s/get_ipv4_nfsserver/${ipv4_nfsserver}/g" "${working_file}"
+		sed -i "s/get_ipv4_domain/${ipv4_domain}/g" "${working_file}"
+    		sed -i "s/get_hostname/${kickstart_hostname}/g" "${working_file}"
+		sed -i "s/get_ntp_pool_name/${ntp_pool_name}/g" "${working_file}"
+		sed -i "s/get_web_server_name/${web_server_name}/g" "${working_file}" 
+		sed -i "s/get_win_hostname/${win_hostname}/g" "${working_file}"
+		sed -i "s/get_tftp_server_name/${tftp_server_name}.ms.local/g" "${working_file}"
+		sed -i "s/get_rhel_activation_key/${rhel_activation_key}/g" "${working_file}"
+		sed -i "s/get_time_of_last_update/${time_of_last_update}/g" "${working_file}"
 	}
 
-	if [ -d "${var_input_dir_or_file}" ]
+	if [ -d "${input_dir_or_file}" ]
 	then
-		for var_working_file in $(find "${var_input_dir_or_file}" -type f )
+		for working_file in $(find "${input_dir_or_file}" -type f )
 		do
-			fn_run_sed_command "${var_working_file}"
+			fn_run_sed_command "${working_file}"
 		done
 
-	elif [ -f "${var_input_dir_or_file}" ]
+	elif [ -f "${input_dir_or_file}" ]
 	then
-		var_working_file="${var_input_dir_or_file}"
-		fn_run_sed_command "${var_working_file}"
+		working_file="${input_dir_or_file}"
+		fn_run_sed_command "${working_file}"
 	fi
 }
 
-fn_set_environment "${var_host_ks_profiles_dir}"
-fn_set_environment "${v_ks_manager_kickstarts_dir}/local-repo"
-fn_set_environment "${v_ks_manager_kickstarts_dir}/grub-template-auto.cfg" 
-fn_set_environment "${v_ks_manager_kickstarts_dir}/grub-template-manual.cfg" 
 
-echo -e "\nUpdating /var/lib/tftpboot/grub.cfg . . .\n"
+fn_set_environment "${host_kickstart_dir}"
 
-sudo rsync -avPh "${v_ks_manager_kickstarts_dir}"/grub-template-manual.cfg /var/lib/tftpboot/grub.cfg
+echo -e "\nCreating or Updating /var/lib/tftpboot/grub.cfg-01-${grub_cfg_mac_address} . . .\n"
 
-echo -e "\nCreating or Updating /var/lib/tftpboot/grub.cfg-01-${var_grub_cfg_mac_address} . . .\n"
+rsync -avPh "${ksmanager_main_dir}"/grub-template-"${os_distribution}".cfg  /var/lib/tftpboot/grub.cfg-01-"${grub_cfg_mac_address}"
 
-sudo rsync -avPh "${v_ks_manager_kickstarts_dir}"/grub-template-auto.cfg /var/lib/tftpboot/grub.cfg-01-"${var_grub_cfg_mac_address}"
+fn_set_environment "/var/lib/tftpboot/grub.cfg-01-${grub_cfg_mac_address}"
+
+echo -e "\nCreating or Updating /var/lib/tftpboot/grub.cfg . . .\n"
+
+rsync -avPh "${ksmanager_main_dir}"/grub-template-manual.cfg /var/lib/tftpboot/grub.cfg
+
+fn_set_environment "/var/lib/tftpboot/grub.cfg"
 
 echo -e "\nFYI:"
-echo "	Hostname     : ${v_get_hostname}.${v_get_ipv4_domain}"
-echo "	MAC Address  : ${var_get_mac_address}" 
-echo "	IPv4 Address : ${v_get_ipv4_address}"
-echo "	IPv4 Netmask : ${v_get_ipv4_netmask}"
-echo "	IPv4 Gateway : ${v_get_ipv4_gateway}"
-echo "	IPv4 DNS     : ${v_get_ipv4_nameserver}"
-echo "	Domain Name  : ${v_get_ipv4_domain}"
-echo "	TFTP Server  : ${v_get_tftp_server_name}.${v_get_ipv4_domain}"
-echo "	NTP Pool     : ${v_get_ntp_pool_name}.${v_get_ipv4_domain}"
-echo "	Web Server   : ${v_get_web_server_name}.${v_get_ipv4_domain}"
-echo "	Windows Host : ${v_get_win_hostname}.${v_get_ipv4_domain}"	
-echo "	Kickstarts   : ${var_host_ks_profiles_dir}"
+echo "	Hostname     : ${kickstart_hostname}.${ipv4_domain}"
+echo "	MAC Address  : ${mac_address_of_host}" 
+echo "	IPv4 Address : ${ipv4_address}"
+echo "	IPv4 Netmask : ${ipv4_netmask}"
+echo "	IPv4 Gateway : ${ipv4_gateway}"
+echo "	IPv4 DNS     : ${ipv4_nameserver}"
+echo "	Domain Name  : ${ipv4_domain}"
+echo "	TFTP Server  : ${tftp_server_name}.${ipv4_domain}"
+echo "	NTP Pool     : ${ntp_pool_name}.${ipv4_domain}"
+echo "	Web Server   : ${web_server_name}.${ipv4_domain}"
+echo "	Windows Host : ${win_hostname}.${ipv4_domain}"	
+echo "	Kickstarts   : ${host_kickstart_dir}"
+echo "	Selected OS  : ${os_distribution} server edition"
 
-echo -e "\nAll done, You can proceed to pxeboot the host ${v_get_hostname}\n"
+echo -e "\nAll done, You can proceed to pxeboot the host ${kickstart_hostname}\n"
 
 exit
