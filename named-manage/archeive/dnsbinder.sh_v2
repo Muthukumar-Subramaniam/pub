@@ -10,19 +10,19 @@ v_RESET='\033[0m'       # Reset to default color
 var_named_manage_dir='/scripts_by_muthu/server/named-manage'
 var_zone_dir='/var/named/zone-files'
 v_fw_zone="${var_zone_dir}/ms.local-forward.db"
-v_ptr_zone1="${var_zone_dir}/192.168.168.ms.local-reverse.db"
-v_ptr_zone2="${var_zone_dir}/192.168.169.ms.local-reverse.db"
-v_ptr_zone3="${var_zone_dir}/192.168.170.ms.local-reverse.db"
-v_ptr_zone4="${var_zone_dir}/192.168.171.ms.local-reverse.db"
-v_tmp_ptr_zone1_exhausted="/tmp/tmp_ptr_zone1_exhausted"
-v_tmp_ptr_zone2_exhausted="/tmp/tmp_ptr_zone2_exhausted"
-v_tmp_ptr_zone3_exhausted="/tmp/tmp_ptr_zone3_exhausted"
-v_tmp_ptr_zone4_exhausted="/tmp/tmp_ptr_zone4_exhausted"
-v_tmp_file_dnsmanager="/tmp/tmp_file_dnsmanager"
+v_total_ptr_zones=4
+
+for ((v_zone_number=1; v_zone_number<=v_total_ptr_zones; v_zone_number++))
+do
+    eval "v_ptr_zone${v_zone_number}=\"${var_zone_dir}/192.168.$((167 + v_zone_number)).ms.local-reverse.db\""
+    eval "v_subnet${v_zone_number}=\"192.168.$((167 + v_zone_number))\""
+done
+
+v_tmp_file_dnsbinder="/tmp/tmp_file_dnsbinder"
 
 if ! sudo -l | grep NOPASSWD &> /dev/null
 then
-	echo -e "\nYou need sudo access without password to run this script! \n"
+	echo -e "${v_RED}\nYou need sudo access without password to run this script! ${v_RESET}\n"
 	exit
 fi
 
@@ -53,7 +53,7 @@ fn_get_host_record() {
 				then
 					read -p "Please Enter the name of host record to ${v_action_requested} : " v_input_host_record
 				else
-					read -p "Please Enter the name of host record to ${v_action_requested} \"${v_host_record}\" : " v_input_host_record
+					read -p "Please Enter the name of host record to ${v_action_requested} ${v_host_record}.ms.local : " v_input_host_record
 				fi
 			fi
 				
@@ -117,7 +117,8 @@ fn_get_host_record() {
 	then 
 		if [[ "${v_action_requested}" == "create" ]]
 		then
-			${v_if_autorun_false} && echo -e "\nA Record for \"${v_host_record}\" already exists in \"${v_fw_zone}\"\n"
+			${v_if_autorun_false} && echo -e "\n${v_RED}Host record for ${v_host_record}.ms.local already exists ! ${v_RESET}\n"
+			${v_if_autorun_false} && echo -e "${v_RED}Nothing to do ! Exiting !  ${v_RESET}\n"
 			return 8
 
 		elif [[ "${v_action_requested}" == "rename" ]]
@@ -126,8 +127,8 @@ fn_get_host_record() {
 
 			if sudo grep "^${v_rename_record} "  "${v_fw_zone}" &>/dev/null
 			then 
-				echo -e "\nConflict : Existing A Record found for \"${v_rename_record}\" in  \"${v_fw_zone}\"\n"
-				echo -e "Nothing to do ! Exiting !\n"
+				echo -e "\n${v_RED}Conflict ! Existing host record found for ${v_rename_record}.ms.local ! ${v_RESET}\n"
+				echo -e "${v_RED}Nothing to do ! Exiting !  ${v_RESET}\n"
 				exit
 			fi
 		fi
@@ -136,8 +137,8 @@ fn_get_host_record() {
 	then
 		if ${v_if_autorun_false}
 		then
-			echo -e "\nA Record for \"${v_host_record}\" not found in \"${v_fw_zone}\"\n"
-			echo -e "Nothing to do ! Exiting !\n"
+			echo -e "\n${v_RED}Host record for ${v_host_record}.ms.local doesn't exist ! ${v_RESET}\n"
+			echo -e "${v_RED}Nothing to do ! Exiting ! ${v_RESET}\n"
 			exit
 		else
 			return 8
@@ -148,86 +149,110 @@ fn_get_host_record() {
 
 fn_update_serial_number_of_zones() {
 
-	${v_if_autorun_false} && echo -e "\nUpdating serial numbers of zone files . . .\n"
+	${v_if_autorun_false} && echo -ne "\n${v_CYAN}Updating serial numbers of zone files . . . ${v_RESET}"
 
-	v_current_serial_ptr_zone=$(sudo grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
-	v_set_new_serial__ptr_zone=$(( v_current_serial_ptr_zone + 1 ))
-	sudo sed -i "/;Serial/s/${v_current_serial_ptr_zone}/${v_set_new_serial__ptr_zone}/g" "${v_fw_zone}"
+	v_current_serial_fw_zone=$(sudo grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
+	v_set_new_serial_fw_zone=$(( v_current_serial_fw_zone + 1 ))
+	sudo sed -i "/;Serial/s/${v_current_serial_fw_zone}/${v_set_new_serial_fw_zone}/g" "${v_fw_zone}"
 
 	v_current_serial_ptr_zone=$(sudo grep ';Serial' "${v_ptr_zone}" | cut -d ";" -f 1 | tr -d '[:space:]')
-	v_set_new_serial__ptr_zone=$(( v_current_serial_ptr_zone + 1 ))
-	sudo sed -i "/;Serial/s/${v_current_serial_ptr_zone}/${v_set_new_serial__ptr_zone}/g" "${v_ptr_zone}"
+	v_set_new_serial_ptr_zone=$(( v_current_serial_ptr_zone + 1 ))
+	sudo sed -i "/;Serial/s/${v_current_serial_ptr_zone}/${v_set_new_serial_ptr_zone}/g" "${v_ptr_zone}"
+
+	${v_if_autorun_false} && echo -ne "${v_GREEN}[ done ]${v_RESET}\n"
 }
 
 
 fn_reload_named_dns_service() {
 
-	echo -e "\nReloading the DNS service ( named ) . . .\n"
+	echo -ne "\n${v_CYAN}Reloading the DNS service ( named ) . . . ${v_RESET}"
 
 	sudo systemctl reload named &>/dev/null
 
 	if sudo systemctl is-active named &>/dev/null;
 	then 
-		echo "Reloaded, service  named is active and running ."
+		echo -ne "${v_GREEN}[ ok ]${v_RESET}\n"
 	else
-		echo -e "\nSomething went wrong !\nService named is not running !\nPlease troubleshoot manually\n"
+		echo -ne "${v_RED}[ failed ]${v_RESET}\n"
 	fi
         
 
 	if [[  "${v_action_requested}" == "create" ]]
 	then
-		echo -e "\nSuccessfully created DNS host record \"${v_host_record}\"\n"
+		echo -e "\n${v_GREEN}Successfully created host record ${v_host_record}.ms.local${v_RESET}\n"
 	 
 	elif [[ "${v_action_requested}" == "delete" ]]
 	then
-		echo -e "\nSuccessfully deleted DNS host record \"${v_host_record}\"\n"
+		echo -e "\n${v_GREEN}Successfully deleted host record ${v_host_record}.ms.local${v_RESET}\n"
 
 	elif [[ "${v_action_requested}" == "rename" ]]
 	then
-        	echo -e "\nSuccessfully renamed DNS record of \"${v_host_record}\" to \"${v_rename_record}\" \n"
+        	echo -e "\n${v_GREEN}Successfully renamed host ${v_host_record}.ms.local to ${v_rename_record}.ms.local${v_RESET}\n"
 	fi
 
 
 	if [[ "${v_action_requested}" != "delete" ]]
 	then
 
-		echo -e "\nForward Look Up ...\n"
+		echo -ne "${v_CYAN}Validating forward look up . . . "
 
 		if  [[ "${v_action_requested}" == "rename" ]]
 		then
-			nslookup ${v_rename_record} | grep -A 1 ^Name
+			if nslookup ${v_rename_record} &>/dev/null
+			then
+				echo -ne "${v_GREEN}[ ok ]${v_RESET}\n"
+			else
+				echo -ne "${v_RED}[ failed ]${v_RESET}\n"
+			fi
 		else
-			nslookup ${v_host_record} | grep -A 1 ^Name 
+			if nslookup ${v_host_record} &>/dev/null
+			then
+				echo -ne "${v_GREEN}[ ok ]${v_RESET}\n"
+			else
+				echo -ne "${v_RED}[ failed ]${v_RESET}\n"
+			fi
 		fi
 	
-		echo -e "\nReverse Look Up ...\n"
+		echo -ne "\n${v_CYAN}Validating reverse look up . . . "
 
-		nslookup ${v_current_ip_of_host_record} 
+		if nslookup ${v_current_ip_of_host_record} &>/dev/null
+		then
+                	echo -ne "${v_GREEN}[ ok ]${v_RESET}\n"
+                else
+                	echo -ne "${v_RED}[ failed ]${v_RESET}\n"
+                fi
+
+		if  [[ "${v_action_requested}" == "rename" ]]
+                then
+			echo -e "\n${v_GREEN}FYI : $(host ${v_rename_record}.ms.local)${v_RESET}\n"
+		else
+			echo -e "\n${v_GREEN}FYI : $(host ${v_host_record}.ms.local)${v_RESET}\n"
+		fi
 	fi
 }
 
 fn_set_ptr_zone() {
 
-	if echo ${v_current_ip_of_host_record} | grep '192.168.168' &>/dev/null
-	then
-		${v_if_autorun_false} && echo -e "\nMatch found with IP ${v_current_ip_of_host_record} for ${v_host_record}.\n"
-		v_ptr_zone="${v_ptr_zone1}"
+	arr_subnets=()
+	arr_ptr_zones=()
 
-	elif echo ${v_current_ip_of_host_record} | grep '192.168.169' &>/dev/null
-	then
-		${v_if_autorun_false} && echo -e "\nMatch found with IP ${v_current_ip_of_host_record} for ${v_host_record}.\n"
-		v_ptr_zone="${v_ptr_zone2}"
+	for ((v_zone_number=1; v_zone_number<=v_total_ptr_zones; v_zone_number++))
+	do
+    		arr_subnet_var="v_subnet${v_zone_number}"
+    		arr_ptr_zone_var="v_ptr_zone${v_zone_number}"
+    		arr_subnets+=( "$(eval echo \${${arr_subnet_var}})" )
+    		arr_ptr_zones+=( "$(eval echo \${${arr_ptr_zone_var}})" )
+	done
 
-	elif echo ${v_current_ip_of_host_record} | grep '192.168.170' &>/dev/null
-	then
-		${v_if_autorun_false} && echo -e "\nMatch found with IP ${v_current_ip_of_host_record} for ${v_host_record}.\n"
-		v_ptr_zone="${v_ptr_zone3}"
-
-	elif echo ${v_current_ip_of_host_record} | grep '192.168.171' &>/dev/null
-	then
-		${v_if_autorun_false} && echo -e "\nMatch found with IP ${v_current_ip_of_host_record} for ${v_host_record}.\n"
-		v_ptr_zone="${v_ptr_zone4}"
-	fi
+	for i in "${!arr_subnets[@]}"
+	do
+    		if [[ "${v_current_ip_of_host_record}" =~ ${arr_subnets[i]} ]]
+		then
+        		${v_if_autorun_false} && echo -e "\n${v_GREEN}Match found with IP ${v_current_ip_of_host_record} for host record ${v_host_record}.ms.local ${v_RESET}\n"
+        		v_ptr_zone="${arr_ptr_zones[i]}"
+        		break
+    		fi
+	done
 }
 
 
@@ -284,64 +309,56 @@ fn_create_host_record() {
 				return 0
 			fi
 		done
-
-		return 1
 	}	
 	
-	fn_check_zones_and_find_ip() {	
+		
+	for ((v_zone_number=1; v_zone_number<=v_total_ptr_zones; v_zone_number++))
+	do
+		eval "v_total_ips_in_ptr_zone${v_zone_number}=\$(sudo sed -n 's/^\([0-9]\+\).*/\1/p' \"\${v_ptr_zone${v_zone_number}}\" | wc -l)"
 
-		if [ ! -f "${v_tmp_ptr_zone1_exhausted}" ]
-		then 
-			if ! fn_check_free_ip "${v_ptr_zone1}" "1" "255" "192.168.168"
+		v_total_ips_in_current_zone=$(eval "echo \${v_total_ips_in_ptr_zone${v_zone_number}}")
+
+		v_current_zubnet=$(eval "echo \${v_subnet${v_zone_number}}")
+
+		v_current_ptr_zone_file=$(eval "echo \${v_ptr_zone${v_zone_number}}")
+
+		if [[ "${v_zone_number}" -eq 1 ]]
+		then
+			if [[ -z ${v_total_ips_in_current_zone} ]] || [[ ${v_total_ips_in_current_zone} -ne 255 ]]
 			then
-				touch "${v_tmp_ptr_zone1_exhausted}"
-				fn_check_zones_and_find_ip
+				fn_check_free_ip "${v_current_ptr_zone_file}" "1" "255" "${v_current_zubnet}"
+				break
+			else
+				continue
 			fi
 
-		elif [ ! -f "${v_tmp_ptr_zone2_exhausted}" ]
-		then 
-			if ! fn_check_free_ip "${v_ptr_zone2}" "0" "255" "192.168.169"
+		elif [[ "${v_zone_number}" -ne 4 ]]
+		then
+			if [[ -z ${v_total_ips_in_current_zone} ]] || [[ ${v_total_ips_in_current_zone} -ne 256 ]]
 			then
-				touch "${v_tmp_ptr_zone2_exhausted}"
-				fn_check_zones_and_find_ip
-			fi
-
-		elif [ ! -f "${v_tmp_ptr_zone3_exhausted}" ]
-		then 
-			if ! fn_check_free_ip "${v_ptr_zone3}" "0" "255" "192.168.170"
-			then
-				touch "${v_tmp_ptr_zone3_exhausted}"
-				fn_check_zones_and_find_ip
-			fi
-
-		elif [ ! -f "${v_tmp_ptr_zone4_exhausted}" ]
-		then 
-			if ! fn_check_free_ip "${v_ptr_zone4}" "0" "254" "192.168.171"
-			then
-				touch "${v_tmp_ptr_zone4_exhausted}"
-				fn_check_zones_and_find_ip
+				fn_check_free_ip "${v_current_ptr_zone_file}" "0" "255" "${v_current_zubnet}"
+				break
+			else
+				continue
 			fi
 		else
-			${v_if_autorun_false} && echo -e "\nNo more IPs available in 192.168.168.0/22 Network of ms.local domain! \n"
-			return 255
+			if [[ -z ${v_total_ips_in_current_zone} ]] || [[ ${v_total_ips_in_current_zone} -ne 255 ]]
+			then
+				fn_check_free_ip "${v_current_ptr_zone_file}" "0" "254" "${v_current_zubnet}"
+				break
+			else
+				${v_if_autorun_false} && echo -e "\n${v_RED}No more IPs available in 192.168.168.0/22 Network of ms.local domain! ${v_RESET}\n"
+				return 255
+			fi
 		fi
+	done
 
-	}
 
-	fn_check_zones_and_find_ip
-	
-	v_exit_status_fn_check_zones_and_find_ip=${?}
-
-	if [[ ${v_exit_status_fn_check_zones_and_find_ip} -eq 255 ]]
-	then
-		return 255
-	fi
+	${v_if_autorun_false} && echo -ne "\n${v_CYAN}Creating host record ${v_host_record}.ms.local . . . ${v_RESET}"
 
 	############### A Record Creation Section ############################
 
 	v_host_record_adjusted_space=$(printf "%-*s" 63 "${v_host_record}")
-
-	${v_if_autorun_false} && echo -e "\nUpdating A Record . . .\n"
 
 	v_add_host_record=$(echo "${v_host_record_adjusted_space} IN A ${v_current_ip_of_host_record}")
 
@@ -357,7 +374,6 @@ fn_create_host_record() {
 
 
 	################## PTR Record Create  Section ###################################
-	${v_if_autorun_false} && echo -e "\nUpdating PTR Record . . .\n"
 
 	v_space_adjusted_host_part_of_current_ip=$(printf "%-*s" 3 "${v_host_part_of_current_ip}")
 
@@ -371,6 +387,9 @@ fn_create_host_record() {
 	fi
 
 	############# End of PTR Record Create Section #######################
+
+
+	${v_if_autorun_false} && echo -ne "${v_GREEN}[ done ]${v_RESET}\n"
 
 	fn_update_serial_number_of_zones
 
@@ -417,10 +436,12 @@ fn_delete_host_record() {
 
 		if [[ ${v_confirmation} == "y" ]]
 		then
+			${v_if_autorun_false} && echo -ne "\n${v_CYAN}Deleting host record ${v_host_record}.ms.local . . . ${v_RESET}"
 
 			sudo sed -i "/^${v_capture_ptr_prefix} /d" "${v_ptr_zone}"
 			sudo sed -i "/^${v_capture_host_record}/d" "${v_fw_zone}"
-			${v_if_autorun_false} && echo -e "\nDeleted A and PTR records of ${v_host_record} from ${v_ptr_zone} and ${v_fw_zone}.\n"
+
+			${v_if_autorun_false} && echo -ne "${v_GREEN}[ done ]${v_RESET}\n"
 
 			fn_update_serial_number_of_zones
 
@@ -433,11 +454,11 @@ fn_delete_host_record() {
 
 		elif [[ ${v_confirmation} == "n" ]]
 		then
-			echo -e "\nCancelled without any changes !\n"
+			echo -e "\n${v_YELLOW}Cancelled without any changes ! ${v_RESET}\n"
 			break
 
 		else
-			echo -e "\nSelect only either (y/n) !\n"
+			echo -e "\n${v_RED}Select only either (y/n) ! ${v_RESET}\n"
 			continue
 
 		fi
@@ -474,14 +495,16 @@ fn_rename_host_record() {
 	
 	while :
 	do
-		read -p "Please confirm to rename the record ${v_host_record} to ${v_rename_record} (y/n) : " v_confirmation
+		read -p "Please confirm to rename the record ${v_host_record}.ms.local to ${v_rename_record}.ms.local (y/n) : " v_confirmation
 		if [[ $v_confirmation == "y" ]]
 		then
+			echo -ne "\n${v_CYAN}Renaming host record ${v_host_record}.ms.local to ${v_rename_record}.ms.local . . . ${v_RESET}"
 
 			sudo sed -i "s/${v_host_record_exist}/${v_host_record_rename}/g" ${v_fw_zone}
 			sudo sed -i "s/${v_host_record}.ms.local./${v_rename_record}.ms.local./g" ${v_ptr_zone}
-			echo -e "\nRenamed A and PTR records of ${v_host_record} in ${v_fw_zone} and ${v_ptr_zone} to ${v_rename_record}.\n"
 
+			echo -ne "${v_GREEN}[ done ]${v_RESET}\n"
+			
 			fn_update_serial_number_of_zones
 
 			if ${v_if_autorun_false}
@@ -493,11 +516,11 @@ fn_rename_host_record() {
 
 		elif [[ $v_confirmation == "n" ]]
 		then
-			echo -e "\nCancelled without any changes !\n"
+			echo -e "\n${v_YELLOW}Cancelled without any changes ! ${v_RESET}\n"
 			break
 
 		else
-			echo -e "\nSelect only either (y/n) !\n"
+			echo -e "\n${v_RED}Select only either (y/n) ! ${v_RESET}\n"
 			continue
 
 		fi
@@ -525,8 +548,6 @@ fn_handle_multiple_host_record() {
 
 	fn_progress_title
 	
-	rm -f /tmp/tmp_ptr_zone*
-	
 	if [ -z "${v_host_list_file}" ]
 	then
 		echo
@@ -547,7 +568,7 @@ fn_handle_multiple_host_record() {
 	
 	while :
 	do
-		echo -e "\n${v_CYAN}Records to be  ${v_action_required^}d : ${v_RESET}\n"
+		echo -e "\n${v_CYAN}Records to be ${v_action_required^}d : ${v_RESET}\n"
 	
 		cat ${v_host_list_file}
 	
@@ -569,10 +590,12 @@ fn_handle_multiple_host_record() {
 		fi
 	done
 	
-	> "${v_tmp_file_dnsmanager}"
+	> "${v_tmp_file_dnsbinder}"
 	
-	v_successefull="${v_GREEN}[ succeded ]${v_RESET}"
+	v_successfull="${v_GREEN}[ succeded ]${v_RESET}"
 	v_failed="${v_RED}[ failed ]${v_RESET}"
+	v_count_successfull=0
+	v_count_failed=0
 	
 	v_pre_execution_serial_fw_zone=$(sudo grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
 	
@@ -589,8 +612,9 @@ fn_handle_multiple_host_record() {
 		if [[ ${v_host_count} -le ${v_total_host_records} ]];then
 	
 			echo -e "################################( Running )################################"
-
-			echo -ne "\n${v_GREEN}Status : [ ${v_host_count}/${v_total_host_records} ] host records are being processed${v_RESET}"
+			echo -e "${v_CYAN}Status     : [ ${v_host_count}/${v_total_host_records} ] host records have been processed${v_RESET}"
+			echo -e "${v_GREEN}Successful : ${v_count_successfull}${v_RESET}"
+			echo -ne "${v_RED}Failed     : ${v_count_failed}${v_RESET}"
 		fi
 	
 		let v_host_count++
@@ -635,7 +659,9 @@ fn_handle_multiple_host_record() {
 			
 		if [[ ${var_exit_status} -eq 9 ]]
 		then
-	        	echo -e "${v_RED}Invalid-Host     ${v_details_of_host_record}" >> "${v_tmp_file_dnsmanager}" && echo -ne "${v_failed}" 
+	        	echo -e "${v_RED}Invalid-Host     ${v_details_of_host_record}" >> "${v_tmp_file_dnsbinder}"
+			echo -ne "${v_failed}"
+			let v_count_failed++ 
 	
 		elif [[ ${var_exit_status} -eq 8 ]]
 		then
@@ -648,19 +674,27 @@ fn_handle_multiple_host_record() {
 				v_existence_state="Doesn't-Exist   "
 			fi
 
-	        	echo -e "${v_YELLOW}${v_existence_state} ${v_details_of_host_record}" >> "${v_tmp_file_dnsmanager}" && echo -ne "${v_failed}"
+	        	echo -e "${v_YELLOW}${v_existence_state} ${v_details_of_host_record}" >> "${v_tmp_file_dnsbinder}"
+			echo -ne "${v_failed}"
+			let v_count_failed++
 	
 		elif [[ ${var_exit_status} -eq 255 ]]
 		then
-	        	echo -e "${v_RED}IP-Exhausted     ${v_details_of_host_record}" >> "${v_tmp_file_dnsmanager}" && echo -ne "${v_failed}"
+	        	echo -e "${v_RED}IP-Exhausted     ${v_details_of_host_record}" >> "${v_tmp_file_dnsbinder}"
+			echo -ne "${v_failed}"
+			let v_count_failed++
 		else
 			v_serial_fw_zone_post_execution=$(sudo grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
 	
 			if [[ "${v_serial_fw_zone_pre_execution}" -ne "${v_serial_fw_zone_post_execution}" ]]
 			then
-				echo -e "${v_GREEN}${v_action_required^}d          ${v_details_of_host_record}" >> "${v_tmp_file_dnsmanager}" && echo -ne "${v_successefull}"
+				echo -e "${v_GREEN}${v_action_required^}d          ${v_details_of_host_record}" >> "${v_tmp_file_dnsbinder}"
+				echo -ne "${v_successfull}"
+				let v_count_successfull++
 			else
-	        		echo -e "${v_RED}Failed-to-${v_action_required^} ${v_details_of_host_record}" >> "${v_tmp_file_dnsmanager}" && echo -ne "${v_failed}"
+	        		echo -e "${v_RED}Failed-to-${v_action_required^} ${v_details_of_host_record}" >> "${v_tmp_file_dnsbinder}"
+				echo -ne "${v_failed}"
+				let v_count_failed++
 			fi
 		fi
 	
@@ -669,7 +703,9 @@ fn_handle_multiple_host_record() {
 			clear
 			fn_progress_title
 			echo -e "################################( Completed )##############################\n"
-			echo -ne "${v_GREEN}Status : [ ${v_host_count}/${v_total_host_records} ] host records have been processed${v_RESET}"
+			echo -e "${v_CYAN}Status     : [ ${v_host_count}/${v_total_host_records} ] host records have been processed${v_RESET}"
+			echo -e "${v_GREEN}Successful : ${v_count_successfull}${v_RESET}"
+			echo -ne "${v_RED}Failed     : ${v_count_failed}${v_RESET}"
 		fi
 	
 	
@@ -704,12 +740,11 @@ fn_handle_multiple_host_record() {
 		echo -e "${v_CYAN}Action-Taken     FQDN${v_RESET}"
 	fi
 	
-	cat "${v_tmp_file_dnsmanager}"
+	cat "${v_tmp_file_dnsbinder}"
 	
 	echo
 	
-	rm -f "${v_tmp_file_dnsmanager}"
-	rm -f /tmp/tmp_ptr_zone*
+	rm -f "${v_tmp_file_dnsbinder}"
 }
 
 fn_main_menu() {
@@ -788,7 +823,7 @@ then
 			fi
 
 			cat << EOF
-Usage: dnsmanager [ option ] [ DNS host record ]
+Usage: dnsbinder [ option ] [ DNS host record ]
 Use one of the following Options :
 	-c 	To create a DNS host record
 	-d 	To delete a DNS host record
@@ -796,7 +831,7 @@ Use one of the following Options :
 	-cf 	To create multiple DNS host records provided in a file 
 	-df	To delete multiple DNS host records provided in a file
 [ Or ]
-Run dnsmanager utility without any arguements to get menu driven actions.
+Run dnsbinder utility without any arguements to get menu driven actions.
 
 EOF
 			;;

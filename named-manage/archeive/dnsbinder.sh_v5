@@ -15,13 +15,13 @@ v_CYAN='\033[0;36m'     # Cyan
 v_MAGENTA='\033[0;35m'  # Magenta
 v_RESET='\033[0m'       # Reset to default color
 
-v_domain_name=$(if [ -f /etc/named.conf ];then grep 'zones-are-managed-by-dnsmanager' /etc/named.conf | awk '{print $2}';fi)
+v_domain_name=$(if [ -f /etc/named.conf ];then grep 'zones-are-managed-by-dnsbinder' /etc/named.conf | awk '{print $2}';fi)
 
 fn_check_existence_of_domain() {
 	if [ -z "${v_domain_name}" ]
 	then
-		echo -e "\n${v_RED}> Seems like bind dns service is not being handled by dnsmanager! ${v_RESET}\n"
-		echo -e "${v_YELLOW}> Please check and setup the same using dnsmanager utility itself! ${v_RESET}\n"
+		echo -e "\n${v_RED}> Seems like bind dns service is not being handled by dnsbinder! ${v_RESET}\n"
+		echo -e "${v_YELLOW}> Please check and setup the same using dnsbinder utility itself! ${v_RESET}\n"
 		exit
 	fi
 }
@@ -97,15 +97,15 @@ do
     let v_zone_number++
 done
 
-v_tmp_file_dnsmanager="/tmp/tmp_file_dnsmanager"
+v_tmp_file_dnsbinder="/tmp/tmp_file_dnsbinder"
 
 
 fn_configure_named_dns_server() {
 
 	if [ ! -z "${v_domain_name}" ]
 	then
-		echo -e "\n${v_YELLOW}> Seems like bind dns server and domain is already setup and managed by dnsmanager! ${v_RESET}\n"
-		echo -e "${v_GREEN}> Domain '${v_domain_name}' is already being managed by dnsmanager! ${v_RESET}\n"
+		echo -e "\n${v_YELLOW}> Seems like bind dns server and domain is already setup and managed by dnsbinder! ${v_RESET}\n"
+		echo -e "${v_GREEN}> Domain '${v_domain_name}' is already being managed by dnsbinder! ${v_RESET}\n"
 		echo -e "${v_YELLOW}> Nothing to do!  ${v_RESET}\n"
 		exit
 	fi
@@ -166,7 +166,7 @@ fn_configure_named_dns_server() {
 
 	echo -ne "\n${v_CYAN}Taking backup of named.conf . . . ${v_RESET}"
 
-	cp -p /etc/named.conf /etc/named.conf_bkp_by_dnsmanager
+	cp -p /etc/named.conf /etc/named.conf_bkp_by_dnsbinder
 	
 	echo -e "${v_GREEN}[ done ]${v_RESET}"
 
@@ -182,7 +182,8 @@ fn_configure_named_dns_server() {
 
 	tee -a /etc/named.conf > /dev/null << EOF
 # BEGIN zones-of-${v_given_domain}-domain
-# ${v_given_domain} zones-are-managed-by-dnsmanager
+# dnsbinder-network ${v_network}\/${v_cidr} 
+# ${v_given_domain} zones-are-managed-by-dnsbinder
 //Forward Zone for ${v_given_domain}
 zone "${v_given_domain}" IN {
            type master;
@@ -279,9 +280,9 @@ EOF
 	echo -e "${v_GREEN}[ done ]${v_RESET}"
 
 	echo -e "\n${v_GREEN}All done! Your domain \"${v_given_domain}\" with DNS server ${v_primary_ip} [ ${v_dns_host_short_name}.${v_given_domain}  ] has been configured.${v_RESET}"
-	echo -e "${v_YELLOW}Now you could manage the domain  \"${v_given_domain}\" with dnsmanager utility from command line.\n${v_RESET}"
+	echo -e "${v_YELLOW}Now you could manage the domain  \"${v_given_domain}\" with dnsbinder utility from command line.\n${v_RESET}"
 
-	cp -p $(pwd)/$0 /usr/local/bin/dnsmanager
+	cp -p $(pwd)/$0 /usr/local/bin/dnsbinder
 
 	exit
 }
@@ -408,11 +409,13 @@ fn_get_host_record() {
 	fi
 }
 
+
+
 fn_update_serial_number_of_zones() {
 
 	${v_if_autorun_false} && echo -ne "\n${v_CYAN}Updating serial numbers of zone files . . . ${v_RESET}"
 
-	v_current_serial_fw_zone=$(grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
+	v_current_serial_fw_zone=$(grep ';Serial' "${v_fw_zone}" | cut -d ";" -f 1 | tr -d '[:space:]')
 	v_set_new_serial_fw_zone=$(( v_current_serial_fw_zone + 1 ))
 	sed -i "/;Serial/s/${v_current_serial_fw_zone}/${v_set_new_serial_fw_zone}/g" "${v_fw_zone}"
 
@@ -516,6 +519,73 @@ fn_set_ptr_zone() {
 	done
 }
 
+fn_get_ipv4_address() {
+	fn_validate_ipv4_address() {
+    		local ipv4_provided="$1"
+    		local octet
+
+    		# Use a regex pattern for IPv4 validation
+    		if [[ "$ipv4_provided" =~ ^([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})$ ]]; then
+        		# Check if each octet is in the range 0-255
+        		for octet in ${BASH_REMATCH[@]:1}; do
+            			if (( octet < 0 || octet > 255 )); then
+                			echo "Invalid input provided for IPv4 Address !"
+					fn_get_ipv4_address
+            			fi
+        		done
+    		else
+    			echo "Invalid input provided for IPv4 Address !"
+			fn_get_ipv4_address
+    		fi
+	}
+
+	dnsbinder_network=$(grep dnsbinder-network /etc/named.conf | awk '{print $3}')
+	read -p "Provide the required IPv4 Address ( within ${dnsbinder_network} ) : " ipv4_provided
+
+	fn_validate_ipv4_address "${ipv4_provided}"
+
+	# Convert IP to decimal
+	fn_convert_ip_to_decimal() {
+    		IFS=. read -r ipv4_octet1 ipv4_octet2 ipv4_octet3 ipv4_octet4 <<< "${1}"
+    		echo $(( (ipv4_octet1 << 24) + (ipv4_octet2 << 16) + (ipv4_octet3 << 8) + ipv4_octet4 ))
+	}
+
+	# Function to check if an IP is within a CIDR range
+	fn_check_whether_ip_in_range() {
+    		local ipv4_provided="${1}"
+    		local dnsbinder_network="${2}"
+
+    		# Split network into base IP and prefix length
+    		IFS='/'
+    		read -r network_base network_mask <<< "${dnsbinder_network}"
+
+    		# Convert IPs to decimal
+    		decimal_value_of_ipv4=$(fn_convert_ip_to_decimal "${ipv4_provided}")
+    		decimal_value_of_network=$(fn_convert_ip_to_decimal "${network_base}")
+
+    		# Calculate network range
+    		range_size=$(( 32 - network_mask ))
+    		net_start=$(( decimal_value_of_network & (0xFFFFFFFF << range_size) ))
+    		net_end=$(( net_start | ((1 << range_size) - 1) ))
+
+    		# Check if IP falls within range
+    		if (( decimal_value_of_ipv4 >= net_start && decimal_value_of_ipv4 <= net_end )); then
+        		return 0  # IP is in range
+    		else
+        		return 1  # IP is NOT in range
+    		fi
+	}
+
+	while :
+	do
+		if fn_check_whether_ip_in_range "${ipv4_provided}" "${dnsbinder_network}"; then
+			break
+		else
+			echo "Provided IPv4 address is not within the network ${dnsbinder_network} !"
+			fn_get_ipv4_address
+		fi
+	done
+}
 
 fn_create_host_record() {
 
@@ -533,6 +603,10 @@ fn_create_host_record() {
 	if [[ ${v_exit_status_fn_get_host_record} -ne 0 ]]
 	then
 		return ${v_exit_status_fn_get_host_record}
+	fi
+
+	if [ ! -z "${specific_ipv4_requested}" ] ; then
+		fn_get_ipv4_address
 	fi
 
 	fn_check_free_ip() {
@@ -575,41 +649,82 @@ fn_create_host_record() {
 		
 	for ((v_zone_number=1; v_zone_number<=v_total_ptr_zones; v_zone_number++))
 	do
-		eval "v_total_ips_in_ptr_zone${v_zone_number}=\$(sed -n 's/^\([0-9]\+\).*/\1/p' \"\${v_ptr_zone${v_zone_number}}\" | wc -l)"
+		v_current_ptr_zone_file="v_ptr_zone${v_zone_number}"
 
-		v_total_ips_in_current_zone=$(eval "echo \${v_total_ips_in_ptr_zone${v_zone_number}}")
+		v_current_ptr_zone_file="${!v_current_ptr_zone_file}"
 
-		v_current_zubnet=$(eval "echo \${v_subnet${v_zone_number}}")
+		v_total_ips_in_current_zone=$(sed -n 's/^\([0-9]\+\).*/\1/p' "${v_current_ptr_zone_file}" | wc -l)
 
-		v_current_ptr_zone_file=$(eval "echo \${v_ptr_zone${v_zone_number}}")
+		v_current_subnet="v_subnet${v_zone_number}"
 
-		if [[ "${v_zone_number}" -eq 1 ]]
+		v_current_subnet="${!v_current_subnet}"
+
+		if [[ ! -z "${ipv4_provided}" ]]
 		then
-			if [[ -z ${v_total_ips_in_current_zone} ]] || [[ ${v_total_ips_in_current_zone} -ne 255 ]]
-			then
-				fn_check_free_ip "${v_current_ptr_zone_file}" "1" "255" "${v_current_zubnet}"
-				break
+			IFS='.' read -r ipv4_octet1 ipv4_octet2 ipv4_octet3 ipv4_octet4 <<< "${ipv4_provided}"
+			subnet_part_of_ipv4_provided="${ipv4_octet1}.${ipv4_octet2}.${ipv4_octet3}"
+			host_part_of_ipv4_provided="${ipv4_octet4}"
+			
+			if [[ "${v_current_subnet}" == "${subnet_part_of_ipv4_provided}" ]]
+			then	
+				if grep "^${host_part_of_ipv4_provided} " "${v_current_ptr_zone_file}" &>/dev/null  	
+				then
+					echo "Record already exists for provided IPv4 address ${ipv4_provided} !"
+					host  ${ipv4_provided}
+					echo "Please try again with another IPv4 address !"
+					exit 1
+				else
+					mapfile -t v_list_of_ips_in_zone < <(sed -n 's/^\([0-9]\+\).*/\1/p' "${v_current_ptr_zone_file}" | sort -n)
+					v_host_part_of_current_ip="${host_part_of_ipv4_provided}"
+					v_current_ip_of_host_record="${subnet_part_of_ipv4_provided}.${v_host_part_of_current_ip}"
+					v_ptr_zone="${v_current_ptr_zone_file}"
+					if [[ ! -z "${v_total_ips_in_current_zone}" ]]
+					then
+						for ptr_ip in "${v_list_of_ips_in_zone[@]}"
+						do
+							if [[ "${ptr_ip}" -lt "${v_host_part_of_current_ip}" ]]
+							then
+								v_host_part_of_previous_ip="${ptr_ip}"
+							fi
+						done
+						v_previous_ip="${subnet_part_of_ipv4_provided}.${v_host_part_of_previous_ip}"
+					else
+						v_previous_ip=';PTR-Records'
+					fi
+				fi
 			else
 				continue
 			fi
 
-		elif [[ "${v_zone_number}" -ne "${v_total_ptr_zones}" ]]
-		then
-			if [[ -z ${v_total_ips_in_current_zone} ]] || [[ ${v_total_ips_in_current_zone} -ne 256 ]]
-			then
-				fn_check_free_ip "${v_current_ptr_zone_file}" "0" "255" "${v_current_zubnet}"
-				break
-			else
-				continue
-			fi
 		else
-			if [[ -z ${v_total_ips_in_current_zone} ]] || [[ ${v_total_ips_in_current_zone} -ne 255 ]]
+			if [[ "${v_zone_number}" -eq 1 ]]
 			then
-				fn_check_free_ip "${v_current_ptr_zone_file}" "0" "254" "${v_current_zubnet}"
-				break
+				if [[ -z ${v_total_ips_in_current_zone} ]] || [[ ${v_total_ips_in_current_zone} -ne 255 ]]
+				then
+					fn_check_free_ip "${v_current_ptr_zone_file}" "1" "255" "${v_current_subnet}"
+					break
+				else
+					continue
+				fi
+
+			elif [[ "${v_zone_number}" -ne "${v_total_ptr_zones}" ]]
+			then
+				if [[ -z ${v_total_ips_in_current_zone} ]] || [[ ${v_total_ips_in_current_zone} -ne 256 ]]
+				then
+					fn_check_free_ip "${v_current_ptr_zone_file}" "0" "255" "${v_current_subnet}"
+					break
+				else
+					continue
+				fi
 			else
-				${v_if_autorun_false} && echo -e "\n${v_RED}No more IPs available in ${v_network_and_cidr} Network of ${v_domain_name} domain! ${v_RESET}\n"
-				return 255
+				if [[ -z ${v_total_ips_in_current_zone} ]] || [[ ${v_total_ips_in_current_zone} -ne 255 ]]
+				then
+					fn_check_free_ip "${v_current_ptr_zone_file}" "0" "254" "${v_current_subnet}"
+					break
+				else
+					${v_if_autorun_false} && echo -e "\n${v_RED}No more IPs available in ${v_network_and_cidr} Network of ${v_domain_name} domain! ${v_RESET}\n"
+					return 255
+				fi
 			fi
 		fi
 	done
@@ -788,7 +903,7 @@ fn_rename_host_record() {
 
 fn_handle_multiple_host_record() {		
 
-	touch /tmp/dnsmanager_fn_handle_multiple_host_record.lock
+	touch /tmp/dnsbinder_fn_handle_multiple_host_record.lock
 
 	v_host_list_file="${1}"
 	v_action_required="${2}"
@@ -851,7 +966,7 @@ fn_handle_multiple_host_record() {
 		fi
 	done
 	
-	> "${v_tmp_file_dnsmanager}"
+	> "${v_tmp_file_dnsbinder}"
 	
 	v_successfull="${v_GREEN}[ succeded ]${v_RESET}"
 	v_failed="${v_RED}[ failed ]${v_RESET}"
@@ -920,7 +1035,7 @@ fn_handle_multiple_host_record() {
 			
 		if [[ ${var_exit_status} -eq 9 ]]
 		then
-	        	echo -e "${v_RED}Invalid-Host     ${v_details_of_host_record}" >> "${v_tmp_file_dnsmanager}"
+	        	echo -e "${v_RED}Invalid-Host     ${v_details_of_host_record}" >> "${v_tmp_file_dnsbinder}"
 			echo -ne "${v_failed}"
 			let v_count_failed++ 
 	
@@ -935,13 +1050,13 @@ fn_handle_multiple_host_record() {
 				v_existence_state="Doesn't-Exist   "
 			fi
 
-	        	echo -e "${v_YELLOW}${v_existence_state} ${v_details_of_host_record}" >> "${v_tmp_file_dnsmanager}"
+	        	echo -e "${v_YELLOW}${v_existence_state} ${v_details_of_host_record}" >> "${v_tmp_file_dnsbinder}"
 			echo -ne "${v_failed}"
 			let v_count_failed++
 	
 		elif [[ ${var_exit_status} -eq 255 ]]
 		then
-	        	echo -e "${v_RED}IP-Exhausted     ${v_details_of_host_record}" >> "${v_tmp_file_dnsmanager}"
+	        	echo -e "${v_RED}IP-Exhausted     ${v_details_of_host_record}" >> "${v_tmp_file_dnsbinder}"
 			echo -ne "${v_failed}"
 			let v_count_failed++
 		else
@@ -949,11 +1064,11 @@ fn_handle_multiple_host_record() {
 	
 			if [[ "${v_serial_fw_zone_pre_execution}" -ne "${v_serial_fw_zone_post_execution}" ]]
 			then
-				echo -e "${v_GREEN}${v_action_required^}d          ${v_details_of_host_record}" >> "${v_tmp_file_dnsmanager}"
+				echo -e "${v_GREEN}${v_action_required^}d          ${v_details_of_host_record}" >> "${v_tmp_file_dnsbinder}"
 				echo -ne "${v_successfull}"
 				let v_count_successfull++
 			else
-	        		echo -e "${v_RED}Failed-to-${v_action_required^} ${v_details_of_host_record}" >> "${v_tmp_file_dnsmanager}"
+	        		echo -e "${v_RED}Failed-to-${v_action_required^} ${v_details_of_host_record}" >> "${v_tmp_file_dnsbinder}"
 				echo -ne "${v_failed}"
 				let v_count_failed++
 			fi
@@ -1001,13 +1116,13 @@ fn_handle_multiple_host_record() {
 		echo -e "${v_CYAN}Action-Taken     FQDN${v_RESET}"
 	fi
 	
-	cat "${v_tmp_file_dnsmanager}"
+	cat "${v_tmp_file_dnsbinder}"
 	
 	echo
 	
-	rm -f "${v_tmp_file_dnsmanager}"
+	rm -f "${v_tmp_file_dnsbinder}"
 
-	rm -f /tmp/dnsmanager_fn_handle_multiple_host_record.lock
+	rm -f /tmp/dnsbinder_fn_handle_multiple_host_record.lock
 }
 
 
@@ -1018,7 +1133,7 @@ fn_main_menu() {
 
 cat << EOF
 ##################################################################
-#-------------------------[ DNS-MANAGER ]------------------------#
+#-------------------------[ DNS-BINDER ]------------------------#
 # Domain : ${v_domain_if_present}#
 #----------------------------------------------------------------#
 # 1) Create a DNS host record                                    #
@@ -1026,6 +1141,7 @@ cat << EOF
 # 3) Rename an existing DNS host record                          #
 # 4) Create multiple DNS host records provided in a file         #
 # 5) Delete multiple DNS host records provided in a file         #
+# 6) Create a DNS host record with specific IPv4 Address
 #----------------------------------------------------------------#
 # 0) Configure local dns server and domain if not done already   #
 #----------------------------------------------------------------#
@@ -1063,6 +1179,12 @@ case ${var_function} in
 	5)
 		fn_check_existence_of_domain
 		fn_handle_multiple_host_record "${2}" "delete"
+		exit
+		;;
+	6)
+		fn_check_existence_of_domain
+		specific_ipv4_requested="yes"
+		fn_create_host_record 
 		exit
 		;;
 	q)
@@ -1118,7 +1240,7 @@ then
 			fi
 
 			cat << EOF
-Usage: dnsmanager [ option ] [ DNS host record ]
+Usage: dnsbinder [ option ] [ DNS host record ]
 Use one of the following Options :
 	-c      To create a DNS host record
 	-d      To delete a DNS host record
@@ -1127,7 +1249,7 @@ Use one of the following Options :
 	-df     To delete multiple DNS host records provided in a file
 	--setup	To configure local dns server and domain if not done already
 [ Or ]
-Run dnsmanager utility without any arguements to get menu driven actions.
+Run dnsbinder utility without any arguements to get menu driven actions.
 
 EOF
 			;;
