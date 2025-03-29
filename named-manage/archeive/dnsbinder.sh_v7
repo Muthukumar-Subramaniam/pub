@@ -1,56 +1,19 @@
 #!/bin/bash
-# Define color codes
-MAKE_IT_RED='\033[0;31m'
-MAKE_IT_GREEN='\033[0;32m'
-MAKE_IT_YELLOW='\033[0;33m'
-MAKE_IT_BLUE='\033[0;34m'
-MAKE_IT_CYAN='\033[0;36m'
-MAKE_IT_MAGENTA='\033[0;35m'
-RESET_COLOR='\033[0m' # Reset to default color
-
-print_notify() {
-	if [[ -z "${2}" ]] || [[ "${2}" != "nskip" ]] 
-	then
-		echo -e "${MAKE_IT_CYAN}${1}${RESET_COLOR}"
-	else
-		echo -ne "${MAKE_IT_CYAN}${1}${RESET_COLOR}"
-	fi
-}
-
-print_warning() {
-	if [[ -z "${2}" ]] || [[ "${2}" != "nskip" ]] 
-	then
-		echo -e "${MAKE_IT_YELLOW}${1}${RESET_COLOR}"
-	else
-		echo -ne "${MAKE_IT_YELLOW}${1}${RESET_COLOR}"
-	fi
-}
-
-print_success() {
-	if [[ -z "${2}" ]] || [[ "${2}" != "nskip" ]] 
-	then
-		echo -e "${MAKE_IT_GREEN}${1}${RESET_COLOR}"
-	else
-		echo -ne "${MAKE_IT_GREEN}${1}${RESET_COLOR}"
-	fi
-}
-
-print_error() {
-	if [[ -z "${2}" ]] || [[ "${2}" != "nskip" ]] 
-	then
-		echo -e "${MAKE_IT_RED}${1}${RESET_COLOR}"
-	else
-		echo -ne "${MAKE_IT_RED}${1}${RESET_COLOR}"
-	fi
-}
-
 
 if [[ "${UID}" -ne 0 ]]
 then
-    print_error "\nRun with sudo or run from root account ! \n"
+    echo -e "${v_RED}\nRun with sudo or run from root account ! ${v_RESET}\n"
     exit 1
 fi
 
+# Define color codes
+v_RED='\033[0;31m'      # Red
+v_GREEN='\033[0;32m'    # Green
+v_YELLOW='\033[0;33m'   # Yellow
+v_BLUE='\033[0;34m'     # Blue
+v_CYAN='\033[0;36m'     # Cyan
+v_MAGENTA='\033[0;35m'  # Magenta
+v_RESET='\033[0m'       # Reset to default color
 
 v_tmp_file_dnsbinder="/tmp/tmp_file_dnsbinder"
 
@@ -62,9 +25,9 @@ v_fw_zone="${var_zone_dir}/${v_domain_name}-forward.db"
 fn_check_existence_of_domain() {
 	if [ -z "${v_domain_name}" ]
 	then
-		print_error "\n> Seems like bind dns service is not being handled by dnsbinder! \n"
-		print_notify "> Please check and setup the same using dnsbinder utility itself! \n"
-		exit 1
+		echo -e "\n${v_RED}> Seems like bind dns service is not being handled by dnsbinder! ${v_RESET}\n"
+		echo -e "${v_YELLOW}> Please check and setup the same using dnsbinder utility itself! ${v_RESET}\n"
+		exit
 	fi
 }
 
@@ -160,7 +123,7 @@ fn_split_network_into_cidr24subnets() {
 	
 	# Check if CIDR is valid
 	if ! [[ "${v_cidr}" =~ ^[0-9]+$ ]] || [ "${v_cidr}" -lt 16 ] || [ "${v_cidr}" -gt 24 ]; then
-    		print_error "\nInvalid CIDR. Only Networks with CIDR between 16 and 24 is allowed ! \n"
+    		echo "Invalid CIDR. Only Networks with CIDR between 16 and 24 is allowed."
     		exit 1
 	fi
 	
@@ -181,19 +144,6 @@ if [[ ! -z "${dnsbinder_network}" ]]; then
 	done
 fi
 
-fn_instruct_on_valid_domain_name() {
-print_warning "FYI :
-  > Only allowed TLD is 'local' .
-  > Maximum 2 subdomains are only allowed.
-  > Only letters, numbers, and hyphens are allowed with subdomains.
-  > Hyphens cannot appear at the start or end of the subdomains.
-  > The total length must be between 1 and 63 characters.
-  > Follows the format defined in RFC 1035.
-  > Examples for Valid Domain Names :
-      test.local, test.example.local, 123-example.local, test-lab1.local
-      123.example.local, test1.lab1.local, test-1.example-1.local\n"
-}
-
 fn_configure_named_dns_server() {
 
 	server_is_hosted_on_gcp="false"
@@ -205,13 +155,24 @@ fn_configure_named_dns_server() {
 
 	if [ ! -z "${v_domain_name}" ]
 	then
-		print_error "\n> Seems like bind dns server and domain is already setup and managed by dnsbinder! \n"
-		print_success "> Domain '${v_domain_name}' is already being managed by dnsbinder! \n"
-		print_warning "> Nothing to do!  \n"
+		echo -e "\n${v_YELLOW}> Seems like bind dns server and domain is already setup and managed by dnsbinder! ${v_RESET}\n"
+		echo -e "${v_GREEN}> Domain '${v_domain_name}' is already being managed by dnsbinder! ${v_RESET}\n"
+		echo -e "${v_YELLOW}> Nothing to do!  ${v_RESET}\n"
 		exit
 	fi
 
-
+	fn_instruct_on_valid_domain_name() {
+		echo -e "\nFYI :"
+		echo -e "${v_RED}> Only allowed TLD is 'local' ."
+		echo -e "> Maximum 2 subdomains are only allowed."
+		echo -e "> Only letters, numbers, and hyphens are allowed with subdomains."
+		echo -e "> Hyphens cannot appear at the start or end of the subdomains."
+		echo -e "> The total length must be between 1 and 63 characters."
+		echo -e "> Follows the format defined in RFC 1035."
+		echo -e "> Examples for Valid Domain Names :"  
+		echo -e "	test.local, test.example.local, 123-example.local, test-lab1.local"
+		echo -e "	123.example.local, test1.lab1.local, test-1.example-1.local${v_RESET}\n"
+	}
 	
 	fn_instruct_on_valid_domain_name	
 
@@ -228,7 +189,7 @@ fn_configure_named_dns_server() {
 		fi
 	done
 
-	print_notify "\nFetching network information from the system . . . "  "nskip"
+	echo -ne "\n${v_CYAN}Fetching network information from the system . . . ${v_RESET}"
 
 	v_dns_host_short_name=$(hostname -s)
 	v_primary_interface=$(ip r | grep default | awk '{ print $5 }')
@@ -237,35 +198,35 @@ fn_configure_named_dns_server() {
 
 	fn_split_network_into_cidr24subnets
 
-	print_success "[ done ]"
+	echo -e "${v_GREEN}[ done ]${v_RESET}"
 
-	print_notify "\nChecking whether required bind dns packages are installed . . . "  "nskip"
+	echo -ne "\n${v_CYAN}Checking whether required bind dns packages are installed . . . ${v_RESET}"
 
 	if rpm -q bind bind-utils &>/dev/null 
 	then
-		print_success "[ already installed ]"
+		echo -e "${v_GREEN}[ already installed ]${v_RESET}"
 	else
-		print_warning "[ not yet installed ]"
+		echo -e "${v_YELLOW}[ not yet installed ]${v_RESET}"
 
-		print_notify "\nInstalling the required bind dns packages . . . "  "nskip"
+		echo -ne "\n${v_CYAN}Installing the required bind dns packages . . . ${v_RESET}"
 
 		if dnf install bind bind-utils -y &>/dev/null
 		then
-			print_success "[ installed ]"
+			echo -e "${v_GREEN}[ installed ]${v_RESET}"
 		else
-			print_error "[ failed to install ]"
-			print_error "\nTry installing the packages bind and bind-utils manually then try the script again! \n"
-			exit 1
+			echo -e "${v_RED}[ failed to install ] ${v_RESET}"
+			echo -e "\n${v_RED}Try installing the packages bind and bind-utils manually then try the script again! \n${v_RESET}"
+			exit
 		fi
 	fi
 
-	print_notify "\nTaking backup of named.conf . . . " "nskip"
+	echo -ne "\n${v_CYAN}Taking backup of named.conf . . . ${v_RESET}"
 
 	cp -p /etc/named.conf /etc/named.conf_bkp_by_dnsbinder
 	
-	print_success "[ done ]"
+	echo -e "${v_GREEN}[ done ]${v_RESET}"
 
-	print_notify "\nConfiguring named.conf . . . " "nskip"
+	echo -ne "\n${v_CYAN}Configuring named.conf . . . ${v_RESET}"
 
 	sed -i "s/listen-on port 53 {\s*127.0.0.1;\s*};/listen-on port 53 { 127.0.0.1; ${v_primary_ip}; };/" /etc/named.conf
 
@@ -313,9 +274,9 @@ EOF
 
 	echo -e "# END zones-of-${v_given_domain}-domain" | tee -a /etc/named.conf > /dev/null
 
-	print_success "[ done ]"
+	echo -e "${v_GREEN}[ done ]${v_RESET}"
 
-	print_notify "\nCreating and configuring zone files . . . " "nskip"
+	echo -ne "\n${v_CYAN}Creating and configuring zone files . . . ${v_RESET}"
 
 	mkdir -p "${var_zone_dir}"
 
@@ -377,23 +338,23 @@ EOF
 		fi
 	done
 
-	print_success "[ done ]"
+	echo -e "${v_GREEN}[ done ]${v_RESET}"
 
-	print_notify "\nEnabling and starting named DNS Service . . . " "nskip"
+	echo -ne "\n${v_CYAN}Enabling and starting named DNS Service . . . ${v_RESET}"
 
 	systemctl enable --now named &>/dev/null	
 	
-	print_success "[ done ]"
+	echo -e "${v_GREEN}[ done ]${v_RESET}"
 
-	print_notify "\nDoing a final restart of named DNS Service . . . " "nskip"
+	echo -ne "\n${v_CYAN}Doing a final restart of named DNS Service . . . ${v_RESET}"
 
 	systemctl restart named &>/dev/null	
 
-	print_success "[ done ]"
+	echo -e "${v_GREEN}[ done ]${v_RESET}"
 
 	if ! "${server_is_hosted_on_gcp}" ; then
 
-		print_notify "\nUpdating Network Manager to point the local dns server and domain . . . " "nskip"
+		echo -ne "\n${v_CYAN}Updating Network Manager to point the local dns server and domain . . . ${v_RESET}"
 
 		v_active_connection_name=$(nmcli connection show --active | grep "${v_primary_interface}" | head -n 1 | awk '{ print $1 }')
 
@@ -405,27 +366,23 @@ EOF
 
 		nmcli connection up "${v_active_connection_name}" &>/dev/null
 
-		print_success "[ done ]"
+		echo -e "${v_GREEN}[ done ]${v_RESET}"
 	fi
 
-	print_notify "\nCreating the command dnsbinder . . . " "nskip"
+	echo -e "\n${v_GREEN}All done! Your domain \"${v_given_domain}\" with DNS server ${v_primary_ip} [ ${v_dns_host_short_name}.${v_given_domain}  ] has been configured.${v_RESET}"
+	echo -e "${v_YELLOW}Now you could manage the domain  \"${v_given_domain}\" with dnsbinder utility from command line.\n${v_RESET}"
 
 	cp -p $(pwd)/$0 /usr/bin/dnsbinder
-
-	print_success "[ done ]"
-
-	print_success "\nAll done! Your domain \"${v_given_domain}\" with DNS server ${v_primary_ip} [ ${v_dns_host_short_name}.${v_given_domain}  ] has been configured."
-	print_notify "Now you could manage the domain  \"${v_given_domain}\" with dnsbinder utility from command line.\n"
 
 	exit
 }
 
 fn_instruct_on_valid_host_record() {
-	print_error "\n> Only letters, numbers, and hyphens are allowed.
-	> Hyphens cannot appear at the start or end.
-	> The total length must be between 1 and 63 characters.
-	> The domain name '${v_domain_name}' will be appended if not present.
-	> Follows the format defined in RFC 1035.\n"
+	echo -e "\n${v_RED}> Only letters, numbers, and hyphens are allowed."
+	echo -e "> Hyphens cannot appear at the start or end."
+	echo -e "> The total length must be between 1 and 63 characters."
+	echo -e "> The domain name '${v_domain_name}' will be appended if not present."
+	echo -e "> Follows the format defined in RFC 1035.${v_RESET}\n"
 	exit 1
 }
 
@@ -511,8 +468,8 @@ fn_get_host_record() {
 	then 
 		if [[ "${v_action_requested}" == "create" ]]
 		then
-			${v_if_autorun_false} && print_error "\nHost record for ${v_host_record}.${v_domain_name} already exists ! \n"
-			${v_if_autorun_false} && print_error "Nothing to do ! Exiting !  \n"
+			${v_if_autorun_false} && echo -e "\n${v_RED}Host record for ${v_host_record}.${v_domain_name} already exists ! ${v_RESET}\n"
+			${v_if_autorun_false} && echo -e "${v_RED}Nothing to do ! Exiting !  ${v_RESET}\n"
 			return 8
 
 		elif [[ "${v_action_requested}" == "rename" ]]
@@ -521,8 +478,8 @@ fn_get_host_record() {
 
 			if grep "^${v_rename_record} "  "${v_fw_zone}" &>/dev/null
 			then 
-				print_error "\nConflict ! Existing host record found for ${v_rename_record}.${v_domain_name} ! \n"
-				print_error "Nothing to do ! Exiting !  \n"
+				echo -e "\n${v_RED}Conflict ! Existing host record found for ${v_rename_record}.${v_domain_name} ! ${v_RESET}\n"
+				echo -e "${v_RED}Nothing to do ! Exiting !  ${v_RESET}\n"
 				exit
 			fi
 		fi
@@ -531,8 +488,8 @@ fn_get_host_record() {
 	then
 		if ${v_if_autorun_false}
 		then
-			print_error "\nHost record for ${v_host_record}.${v_domain_name} doesn't exist ! \n"
-			print_error "Nothing to do ! Exiting ! \n"
+			echo -e "\n${v_RED}Host record for ${v_host_record}.${v_domain_name} doesn't exist ! ${v_RESET}\n"
+			echo -e "${v_RED}Nothing to do ! Exiting ! ${v_RESET}\n"
 			exit
 		else
 			return 8
@@ -544,7 +501,7 @@ fn_get_host_record() {
 
 fn_update_serial_number_of_zones() {
 
-	${v_if_autorun_false} && print_notify "\nUpdating serial numbers of zone files . . . " "nskip"
+	${v_if_autorun_false} && echo -ne "\n${v_CYAN}Updating serial numbers of zone files . . . ${v_RESET}"
 
 	v_current_serial_fw_zone=$(grep ';Serial' "${v_fw_zone}" | cut -d ";" -f 1 | tr -d '[:space:]')
 	v_set_new_serial_fw_zone=$(( v_current_serial_fw_zone + 1 ))
@@ -557,7 +514,7 @@ fn_update_serial_number_of_zones() {
 		sed -i "/;Serial/s/${v_current_serial_ptr_zone}/${v_set_new_serial_ptr_zone}/g" "${v_ptr_zone}"
 	fi
 
-	${v_if_autorun_false} && print_success "[ done ]"
+	${v_if_autorun_false} && echo -ne "${v_GREEN}[ done ]${v_RESET}\n"
 }
 
 
@@ -569,51 +526,51 @@ fn_reload_named_dns_service() {
 		cname_record_true="false"
 	fi
 
-	print_notify "\nReloading the DNS service ( named ) . . . " "nskip"
+	echo -ne "\n${v_CYAN}Reloading the DNS service ( named ) . . . ${v_RESET}"
 
 	systemctl reload named &>/dev/null
 
 	if systemctl is-active named &>/dev/null;
 	then 
-		print_success "[ ok ]"
+		echo -ne "${v_GREEN}[ ok ]${v_RESET}\n"
 	else
-		print_error "[ failed ]"
+		echo -ne "${v_RED}[ failed ]${v_RESET}\n"
 	fi
         
 	if [[  "${v_action_requested}" == "create" ]]
 	then
 		if "${cname_record_true}"
 		then
-			print_success "\nSuccessfully created cname record ${v_input_cname}.${v_domain_name}\n"
+			echo -e "\n${v_GREEN}Successfully created cname record ${v_input_cname}.${v_domain_name}${v_RESET}\n"
 		else
-			print_success "\nSuccessfully created host record ${v_host_record}.${v_domain_name}\n"
+			echo -e "\n${v_GREEN}Successfully created host record ${v_host_record}.${v_domain_name}${v_RESET}\n"
 		fi
 	 
 	elif [[ "${v_action_requested}" == "delete" ]]
 	then
 		if "${cname_record_true}"
 		then
-			print_success "\nSuccessfully deleted cname record ${v_input_cname}.${v_domain_name}\n"
+			echo -e "\n${v_GREEN}Successfully deleted cname record ${v_input_cname}.${v_domain_name}${v_RESET}\n"
 		else
-			print_success "\nSuccessfully deleted host record ${v_host_record}.${v_domain_name}\n"
+			echo -e "\n${v_GREEN}Successfully deleted host record ${v_host_record}.${v_domain_name}${v_RESET}\n"
 		fi
 
 	elif [[ "${v_action_requested}" == "rename" ]]
 	then
-        	print_success "\nSuccessfully renamed host ${v_host_record}.${v_domain_name} to ${v_rename_record}.${v_domain_name}\n"
+        	echo -e "\n${v_GREEN}Successfully renamed host ${v_host_record}.${v_domain_name} to ${v_rename_record}.${v_domain_name}${v_RESET}\n"
 	fi
 
 	if "${cname_record_true}" && [[ "${v_action_requested}" == "create" ]]
 	then
-		print_notify "Validating CNAME record . . . " "nskip"
+		echo -ne "${v_CYAN}Validating CNAME record . . . "
 		if host ${v_input_cname}.${v_domain_name} &>/dev/null
 		then
-			print_success "[ ok ]"
+			echo -ne "${v_GREEN}[ ok ]${v_RESET}\n"
 		else
-			print_error "[ failed ]"
+			echo -ne "${v_RED}[ failed ]${v_RESET}\n"
 		fi
 
-		print_notify "\nFYI :\n$(host ${v_input_cname}.${v_domain_name})\n"
+		echo -e "\n${v_GREEN}FYI :\n$(host ${v_input_cname}.${v_domain_name})${v_RESET}\n"
 
 		return
 	fi
@@ -621,39 +578,39 @@ fn_reload_named_dns_service() {
 	if [[ "${v_action_requested}" != "delete" ]]
 	then
 
-		print_notify "Validating forward look up . . . " "nskip"
+		echo -ne "${v_CYAN}Validating forward look up . . . "
 
 		if  [[ "${v_action_requested}" == "rename" ]]
 		then
 			if host ${v_rename_record}.${v_domain_name} &>/dev/null
 			then
-				print_success "[ ok ]"
+				echo -ne "${v_GREEN}[ ok ]${v_RESET}\n"
 			else
-				print_error "[ failed ]"
+				echo -ne "${v_RED}[ failed ]${v_RESET}\n"
 			fi
 		else
 			if host ${v_host_record}.${v_domain_name} &>/dev/null
 			then
-				print_success "[ ok ]"
+				echo -ne "${v_GREEN}[ ok ]${v_RESET}\n"
 			else
-				print_error "[ failed ]"
+				echo -ne "${v_RED}[ failed ]${v_RESET}\n"
 			fi
 		fi
 
-		print_notify "\nValidating reverse look up . . . " "nskip"
+		echo -ne "\n${v_CYAN}Validating reverse look up . . . "
 
 		if host ${v_current_ip_of_host_record} &>/dev/null
 		then
-                	print_success "[ ok ]"
+                	echo -ne "${v_GREEN}[ ok ]${v_RESET}\n"
                 else
-                	print_error "[ failed ]"
+                	echo -ne "${v_RED}[ failed ]${v_RESET}\n"
                 fi
 
 		if  [[ "${v_action_requested}" == "rename" ]]
                 then
-			print_notify "\nFYI : $(host ${v_rename_record}.${v_domain_name})\n"
+			echo -e "\n${v_GREEN}FYI : $(host ${v_rename_record}.${v_domain_name})${v_RESET}\n"
 		else
-			print_notify "\nFYI : $(host ${v_host_record}.${v_domain_name})\n"
+			echo -e "\n${v_GREEN}FYI : $(host ${v_host_record}.${v_domain_name})${v_RESET}\n"
 		fi
 	fi
 }
@@ -675,7 +632,7 @@ fn_set_ptr_zone() {
 	do
     		if [[ "${v_current_ip_of_host_record}" =~ ${arr_subnets[i]} ]]
 		then
-        		${v_if_autorun_false} && print_success "\nMatch found with IP ${v_current_ip_of_host_record} for host record ${v_host_record}.${v_domain_name} \n"
+        		${v_if_autorun_false} && echo -e "\n${v_GREEN}Match found with IP ${v_current_ip_of_host_record} for host record ${v_host_record}.${v_domain_name} ${v_RESET}\n"
         		v_ptr_zone="${arr_ptr_zones[i]}"
         		break
     		fi
@@ -695,12 +652,12 @@ fn_get_ipv4_address() {
         		# Check if each octet is in the range 0-255
         		for octet in ${BASH_REMATCH[@]:1}; do
             			if (( octet < 0 || octet > 255 )); then
-                			print_error "\nInvalid input provided for IPv4 Address ! \n"
+                			echo "Invalid input provided for IPv4 Address !"
 					fn_get_ipv4_address
             			fi
         		done
     		else
-    			print_error "\nInvalid input provided for IPv4 Address ! \n"
+    			echo "Invalid input provided for IPv4 Address !"
 			fn_get_ipv4_address
     		fi
 	}
@@ -748,7 +705,7 @@ fn_get_ipv4_address() {
 		if fn_check_whether_ip_in_range "${ipv4_provided}" "${dnsbinder_network}"; then
 			break
 		else
-			print_error "\nProvided IPv4 address doesn't reside within the network ${dnsbinder_network} ! \n"
+			echo "Provided IPv4 address is not within the network ${dnsbinder_network} !"
 			fn_get_ipv4_address
 		fi
 	done
@@ -850,9 +807,9 @@ fn_create_host_record() {
 			then	
 				if grep "^${host_part_of_ipv4_provided} " "${v_current_ptr_zone_file}" &>/dev/null  	
 				then
-					print_error "\nRecord already exists for provided IPv4 address ${ipv4_provided} !"
+					echo "Record already exists for provided IPv4 address ${ipv4_provided} !"
 					host  ${ipv4_provided}
-					print_warning "Please try again with another IPv4 address ! \n"
+					echo "Please try again with another IPv4 address !"
 					exit 1
 				else
 					mapfile -t v_list_of_ips_in_zone < <(sed -n 's/^\([0-9]\+\).*/\1/p' "${v_current_ptr_zone_file}" | sort -n)
@@ -898,7 +855,7 @@ fn_create_host_record() {
 				((count_houseful_ptr_zones++))
 				if [[ "${count_houseful_ptr_zones}" -eq "${v_total_ptr_zones}" ]]
 				then
-					${v_if_autorun_false} && print_error "\nNo more IP addresses are available in the ${dnsbinder_network} network of ${v_domain_name} domain ! \n"
+					${v_if_autorun_false} && echo -e "\n${v_RED}No more IPs available in ${v_network_and_cidr} Network of ${v_domain_name} domain! ${v_RESET}\n"
 					return 255
 				else
 					continue
@@ -908,7 +865,7 @@ fn_create_host_record() {
 	done
 
 
-	${v_if_autorun_false} && print_notify "\nCreating host record ${v_host_record}.${v_domain_name} . . . " "nskip"
+	${v_if_autorun_false} && echo -ne "\n${v_CYAN}Creating host record ${v_host_record}.${v_domain_name} . . . ${v_RESET}"
 
 	############### A Record Creation Section ############################
 
@@ -943,7 +900,7 @@ fn_create_host_record() {
 	############# End of PTR Record Create Section #######################
 
 
-	${v_if_autorun_false} && print_success "[ done ]"
+	${v_if_autorun_false} && echo -ne "${v_GREEN}[ done ]${v_RESET}\n"
 
 	fn_update_serial_number_of_zones
 
@@ -990,12 +947,12 @@ fn_delete_host_record() {
 
 		if [[ ${v_confirmation} == "y" ]]
 		then
-			${v_if_autorun_false} && print_notify "\nDeleting host record ${v_host_record}.${v_domain_name} . . . " "nskip"
+			${v_if_autorun_false} && echo -ne "\n${v_CYAN}Deleting host record ${v_host_record}.${v_domain_name} . . . ${v_RESET}"
 
 			sed -i "/^${v_capture_ptr_prefix} /d" "${v_ptr_zone}"
 			sed -i "/^${v_capture_host_record}/d" "${v_fw_zone}"
 
-			${v_if_autorun_false} && print_success "[ done ]"
+			${v_if_autorun_false} && echo -ne "${v_GREEN}[ done ]${v_RESET}\n"
 
 			fn_update_serial_number_of_zones
 
@@ -1008,11 +965,11 @@ fn_delete_host_record() {
 
 		elif [[ ${v_confirmation} == "n" ]]
 		then
-			print_warning "\nCancelled without any changes ! \n"
+			echo -e "\n${v_YELLOW}Cancelled without any changes ! ${v_RESET}\n"
 			break
 
 		else
-			print_error "\nSelect only either (y/n) ! \n"
+			echo -e "\n${v_RED}Select only either (y/n) ! ${v_RESET}\n"
 			continue
 
 		fi
@@ -1050,12 +1007,12 @@ fn_rename_host_record() {
 		read -p "Please confirm to rename the record ${v_host_record}.${v_domain_name} to ${v_rename_record}.${v_domain_name} (y/n) : " v_confirmation
 		if [[ $v_confirmation == "y" ]]
 		then
-			print_notify "\nRenaming host record ${v_host_record}.${v_domain_name} to ${v_rename_record}.${v_domain_name} . . . " "nskip"
+			echo -ne "\n${v_CYAN}Renaming host record ${v_host_record}.${v_domain_name} to ${v_rename_record}.${v_domain_name} . . . ${v_RESET}"
 
 			sed -i "s/${v_host_record_exist}/${v_host_record_rename}/g" ${v_fw_zone}
 			sed -i "s/${v_host_record}.${v_domain_name}./${v_rename_record}.${v_domain_name}./g" ${v_ptr_zone}
 
-			print_success "[ done ]"
+			echo -ne "${v_GREEN}[ done ]${v_RESET}\n"
 			
 			fn_update_serial_number_of_zones
 
@@ -1068,11 +1025,11 @@ fn_rename_host_record() {
 
 		elif [[ $v_confirmation == "n" ]]
 		then
-			print_warning "\nCancelled without any changes ! \n"
+			echo -e "\n${v_YELLOW}Cancelled without any changes ! ${v_RESET}\n"
 			break
 
 		else
-			print_error "\nSelect only either (y/n) ! \n"
+			echo -e "\n${v_RED}Select only either (y/n) ! ${v_RESET}\n"
 			continue
 
 		fi
@@ -1092,11 +1049,11 @@ fn_handle_multiple_host_record() {
 	
 		if [[ ${v_action_required} == "create" ]]
 		then
-			print_notify "#############################(DNS-Bulk-Records-Maker)##############################"
+			echo -e "#############################(DNS-MultiMaker)##############################"
 
 		elif [[ ${v_action_required} == "delete" ]]
 		then
-			print_notify "###########################(DNS-Bulk-Records-Destroyer)############################"
+			echo -e "###########################(DNS-MultiDestroyer)############################"
 		fi
 	}
 
@@ -1105,13 +1062,13 @@ fn_handle_multiple_host_record() {
 	if [ -z "${v_host_list_file}" ]
 	then
 		echo
-		print_notify "Name of the file containing the list of host records to ${v_action_required} : " 
+		echo -ne "${v_CYAN}Name of the file containing the list of host records to ${v_action_required} : ${v_RESET}" 
 		read -e v_host_list_file
 	fi
 	
-	if [[ ! -f ${v_host_list_file} ]];then print_error "\nFile \"${v_host_list_file}\" doesn't exist!\n";exit;fi 
+	if [[ ! -f ${v_host_list_file} ]];then echo -e "\n${v_RED}File \"${v_host_list_file}\" doesn't exist!${v_RESET}\n";exit;fi 
 	
-	if [[ ! -s ${v_host_list_file} ]];then print_error "\nFile \"${v_host_list_file}\" is emty!\n";exit;fi
+	if [[ ! -s ${v_host_list_file} ]];then echo -e "\n${v_RED}File \"${v_host_list_file}\" is emty!${v_RESET}\n";exit;fi
 	
 	sed -i '/^[[:space:]]*$/d' ${v_host_list_file}
 	
@@ -1122,11 +1079,11 @@ fn_handle_multiple_host_record() {
 	
 	while :
 	do
-		print_notify "\nRecords to be ${v_action_required^}d : \n"
+		echo -e "\n${v_CYAN}Records to be ${v_action_required^}d : ${v_RESET}\n"
 	
 		cat ${v_host_list_file}
 	
-		print_warning "\nProvide your confirmation to ${v_action_required} the above host records (y/n) : " "nskip"
+		echo -ne "\n${v_YELLOW}Provide your confirmation to ${v_action_required} the above host records (y/n) : ${v_RESET}"
 		
 		read v_confirmation
 	
@@ -1136,18 +1093,18 @@ fn_handle_multiple_host_record() {
 	
 		elif [[ ${v_confirmation} == "n" ]]
 		then
-			print_error "\nCancelled without any changes !!\n"
+			echo -e "\n${v_RED}Cancelled without any changes !!${v_RESET}\n"
 			exit
 		else
-			print_error "\nSelect either (y/n) only !\n"
+			echo -e "\n${v_RED}Select either (y/n) only !${v_RESET}\n"
 			continue
 		fi
 	done
 	
 	> "${v_tmp_file_dnsbinder}"
 	
-	v_successfull="[ succeded ]"
-	v_failed="[ failed ]"
+	v_successfull="${v_GREEN}[ succeded ]${v_RESET}"
+	v_failed="${v_RED}[ failed ]${v_RESET}"
 	v_count_successfull=0
 	v_count_failed=0
 	
@@ -1164,15 +1121,16 @@ fn_handle_multiple_host_record() {
 		fn_progress_title
 	
 		if [[ ${v_host_count} -le ${v_total_host_records} ]];then
-			print_notify "####################################( Running )####################################"
-			print_notify "Status     : [ ${v_host_count}/${v_total_host_records} ] host records have been processed"
-			print_success "Successful : ${v_count_successfull}"
-			print_error "Failed     : ${v_count_failed}"
+	
+			echo -e "################################( Running )################################"
+			echo -e "${v_CYAN}Status     : [ ${v_host_count}/${v_total_host_records} ] host records have been processed${v_RESET}"
+			echo -e "${v_GREEN}Successful : ${v_count_successfull}${v_RESET}"
+			echo -ne "${v_RED}Failed     : ${v_count_failed}${v_RESET}"
 		fi
 	
 		let v_host_count++
 	
-		print_notify "\nAttempting to ${v_action_required} the host record ${v_host_record}.${v_domain_name} . . . "  "nskip"
+		echo -ne "\n\n${v_CYAN}Attempting to ${v_action_required} the host record ${v_host_record}.${v_domain_name} . . . ${v_RESET}"
 	
 		v_serial_fw_zone_pre_execution=$(grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
 	
@@ -1203,17 +1161,17 @@ fn_handle_multiple_host_record() {
 	
 		if [[ ${v_action_required} == "create" ]]
 		then
-			v_details_of_host_record="${v_fqdn} ( ${v_ip_address} )"
+			v_details_of_host_record="${v_fqdn} ( ${v_ip_address} )${v_RESET}"
 
 		elif [[ ${v_action_required} == "delete" ]]
 		then
-			v_details_of_host_record="${v_fqdn}"
+			v_details_of_host_record="${v_fqdn}${v_RESET}"
 		fi
 			
 		if [[ ${var_exit_status} -eq 9 ]]
 		then
-	        	print_error "Invalid-Host     ${v_details_of_host_record}" >> "${v_tmp_file_dnsbinder}"
-			print_error "${v_failed}"
+	        	echo -e "${v_RED}Invalid-Host     ${v_details_of_host_record}" >> "${v_tmp_file_dnsbinder}"
+			echo -ne "${v_failed}"
 			let v_count_failed++ 
 	
 		elif [[ ${var_exit_status} -eq 8 ]]
@@ -1227,26 +1185,26 @@ fn_handle_multiple_host_record() {
 				v_existence_state="Doesn't-Exist   "
 			fi
 
-	        	print_warning "${v_existence_state} ${v_details_of_host_record}" >> "${v_tmp_file_dnsbinder}"
-			print_error "${v_failed}"
+	        	echo -e "${v_YELLOW}${v_existence_state} ${v_details_of_host_record}" >> "${v_tmp_file_dnsbinder}"
+			echo -ne "${v_failed}"
 			let v_count_failed++
 	
 		elif [[ ${var_exit_status} -eq 255 ]]
 		then
-	        	print_error "IP-Exhausted     ${v_details_of_host_record}" >> "${v_tmp_file_dnsbinder}"
-			print_error "${v_failed}"
+	        	echo -e "${v_RED}IP-Exhausted     ${v_details_of_host_record}" >> "${v_tmp_file_dnsbinder}"
+			echo -ne "${v_failed}"
 			let v_count_failed++
 		else
 			v_serial_fw_zone_post_execution=$(grep ';Serial' ${v_fw_zone} | cut -d ";" -f 1 | tr -d '[:space:]')
 	
 			if [[ "${v_serial_fw_zone_pre_execution}" -ne "${v_serial_fw_zone_post_execution}" ]]
 			then
-				print_success "${v_action_required^}d          ${v_details_of_host_record}" >> "${v_tmp_file_dnsbinder}"
-				print_success "${v_successfull}"
+				echo -e "${v_GREEN}${v_action_required^}d          ${v_details_of_host_record}" >> "${v_tmp_file_dnsbinder}"
+				echo -ne "${v_successfull}"
 				let v_count_successfull++
 			else
-	        		print_error "Failed-to-${v_action_required^} ${v_details_of_host_record}" >> "${v_tmp_file_dnsbinder}"
-				print_error "${v_failed}"
+	        		echo -e "${v_RED}Failed-to-${v_action_required^} ${v_details_of_host_record}" >> "${v_tmp_file_dnsbinder}"
+				echo -ne "${v_failed}"
 				let v_count_failed++
 			fi
 		fi
@@ -1255,10 +1213,10 @@ fn_handle_multiple_host_record() {
 	
 			clear
 			fn_progress_title
-			print_notify "###################################( Completed )###################################\n"
-			print_notify "Status     : [ ${v_host_count}/${v_total_host_records} ] host records have been processed"
-			print_success "Successful : ${v_count_successfull}"
-			print_error "Failed     : ${v_count_failed}"
+			echo -e "################################( Completed )##############################\n"
+			echo -e "${v_CYAN}Status     : [ ${v_host_count}/${v_total_host_records} ] host records have been processed${v_RESET}"
+			echo -e "${v_GREEN}Successful : ${v_count_successfull}${v_RESET}"
+			echo -ne "${v_RED}Failed     : ${v_count_failed}${v_RESET}"
 		fi
 	
 	
@@ -1268,29 +1226,29 @@ fn_handle_multiple_host_record() {
 	
 	if [[ "${v_pre_execution_serial_fw_zone}" -ne "${v_post_execution_serial_fw_zone}" ]]
 	then
-		print_notify "\nReloading the DNS service ( named ) for the changes to take effect . . . "  "nskip"
+		echo -e "\n\n${v_YELLOW}Reloading the DNS service ( named ) for the changes to take effect . . .${v_RESET}\n"
 	
 		systemctl reload named &>/dev/null
 	
 		if systemctl is-active named &>/dev/null;
 		then 
-			print_success "[ done ]"
+			echo -e "${v_GREEN}Reloaded, service  named is active and running. ${v_RESET}"
 		else
-			print_error "[ failed ]"
+			echo -e "\n${v_RED}Something went wrong !\nService named is not running !\nPlease troubleshoot manually${v_RESET}\n"
 		fi
 	else
-		print_warning "\nNo changes done! Nothing to do!"
+		echo -e "\n\n${v_YELLOW}No changes done! Nothing to do!${v_RESET}"
 	fi
 		
-	print_warning "\nPlease find the below details of the records :\n"
+	echo -e "\n${v_YELLOW}Please find the below details of the records :\n${v_RESET}"
 
 	if [[ ${v_action_required} == "create" ]]
 	then
-		print_notify "Action-Taken     FQDN ( IPv4-Address )"
+		echo -e "${v_CYAN}Action-Taken     FQDN ( IPv4-Address )${v_RESET}"
 
 	elif [[ ${v_action_required} == "delete" ]]
 	then
-		print_notify "Action-Taken     FQDN"
+		echo -e "${v_CYAN}Action-Taken     FQDN${v_RESET}"
 	fi
 	
 	cat "${v_tmp_file_dnsbinder}"
@@ -1358,12 +1316,12 @@ fn_get_cname_record() {
 	then
 		if grep -q "^${v_input_cname} " <<< $(sed -n '/;CNAME-Records/,$p' "${v_fw_zone}")
 		then 
-			print_error "\nCNAME record for \"${v_input_cname}.${v_domain_name}\" already exists! \n"
+			echo  "CNAME record for \"${v_input_cname}.${v_domain_name}\" already exists! "
 			exit 1
 
 		elif grep -q "^${v_input_cname} "  <<< $(sed -n '/;A-Records/,/;CNAME-Records/{//!p;}' "${v_fw_zone}")
 		then
-			print_error "\nConflict! Already a host record exists with the same name of CNAME \"${v_input_cname}.${v_domain_name}\" ! \n"
+			echo "Conflict! Already a host record exists with the same name of CNAME \"${v_input_cname}.${v_domain_name}\" !"
 			exit 1
 		fi
 
@@ -1371,7 +1329,7 @@ fn_get_cname_record() {
 
 		if ! grep -q "^${v_input_hostname} "  <<< $(sed -n '/;A-Records/,/;CNAME-Records/{//!p;}' "${v_fw_zone}")
 		then
-			print_error "\nProvided host record \"${v_input_hostname}.${v_domain_name}\" doesn't exist to create CNAME \"${v_input_cname}.${v_domain_name}\" ! \n"
+			echo "Provided host record \"${v_input_hostname}.${v_domain_name}\" doesn't exist to create CNAME \"${v_input_cname}.${v_domain_name}\" !"
 			exit 1
 		fi
 	fi
@@ -1380,7 +1338,7 @@ fn_get_cname_record() {
 	then
 		if ! grep -q "^${v_input_cname} " <<< $(sed -n '/;CNAME-Records/,$p' "${v_fw_zone}")
 		then 
-			print_error "\nCNAME record for ${v_input_cname}.${v_domain_name} doesn't exist! \n"
+			echo -e "CNAME record for ${v_input_cname}.${v_domain_name} doesn't exist! \n"
 			exit 1
 		fi
 	fi
@@ -1392,7 +1350,7 @@ fn_create_cname_record() {
 	
 	fn_get_cname_record "create"
 
-	print_notify "\nCreating CNAME record \"${v_input_cname}.${v_domain_name}\" for the host record \"${v_input_hostname}.${v_domain_name}\" . . . " "nskip"
+	echo -ne "\n${v_CYAN}Creating CNAME record \"${v_input_cname}.${v_domain_name}\" for the host record \"${v_input_hostname}.${v_domain_name}\" . . . ${v_RESET}"
 
 	v_cname_adjusted_space=$(printf "%-*s" 63 "${v_input_cname}")
 
@@ -1400,7 +1358,7 @@ fn_create_cname_record() {
 
 	sed -i "/^;CNAME-Records/a \\${v_cname_record}" "${v_fw_zone}"
 
-	print_success "[ done ]"
+	echo -ne "${v_GREEN}[ done ]${v_RESET}\n"
 
 	fn_update_serial_number_of_zones "forward-zone-only"
 
@@ -1414,46 +1372,47 @@ fn_delete_cname_record() {
 
 	while :
 	do
-		print_warning "\nCNAME Record to be deleted : $(grep 'alias' <<< $(host ${v_input_cname}.${v_domain_name})) \n\n"
+		echo -ne "\nCNAME Record to be deleted : $(grep 'alias' <<< $(host ${v_input_cname}.${v_domain_name})) \n\n"
 		read -p "Please confirm deletion of cname record \"${v_input_cname}.${v_domain_name}\" (y/n) : " v_confirmation
 		case "${v_confirmation}" in
 			y|Y|"yes")
 				break
 				;;
 			n|N|"no")
-				print_warning "\nAborted ! No changes done! \n"
+				echo "Aborted ! No changes done! "
 				exit
 				;;
 			"")
-				print_error "\nNo Input Provided! \n"
+				echo "No Input Provided! "
 				continue
 				;;
 			*)
-				print_error "\nInvalid Input! \n"
+				echo "Invalid Input! "
 				continue
 				;;
 		esac
 	done
 
-	print_notify "\nDeleting CNAME record \"${v_input_cname}.${v_domain_name}\" . . . "  "nskip"
+	echo -ne "\n${v_CYAN}Deleting CNAME record \"${v_input_cname}.${v_domain_name}\" . . . ${v_RESET}"
 
 	sed -i "/^${v_input_cname} / {/IN CNAME/d}" "${v_fw_zone}" 
 
-	print_success "[ done ]"
+	echo -ne "${v_GREEN}[ done ]${v_RESET}\n"
 
 	fn_update_serial_number_of_zones "forward-zone-only"
 
 	fn_reload_named_dns_service "true"
 }
 
-v_domain_if_present=$(if [ ! -z "${v_domain_name}" ];then echo -n "${v_domain_name}";else echo '[dnsbinder-not-yet-configured]';fi)
-v_domain_if_present=$(printf "%-*s" 53 "${v_domain_if_present}")
-v_network_if_present=$(if [ ! -z "${dnsbinder_network}" ];then echo -n "${dnsbinder_network}";else echo '[dnsbinder-not-yet-configured]';fi)
-v_network_if_present=$(printf "%-*s" 53 "${v_network_if_present}")
-
 fn_main_menu() {
 
-print_notify "##################################################################
+	v_domain_if_present=$(if [ ! -z "${v_domain_name}" ];then echo -n "${v_domain_name}";else echo '[dnsbinder-not-yet-configured]';fi)
+	v_domain_if_present=$(printf "%-*s" 53 "${v_domain_if_present}")
+	v_network_if_present=$(if [ ! -z "${dnsbinder_network}" ];then echo -n "${dnsbinder_network}";else echo '[dnsbinder-not-yet-configured]';fi)
+	v_network_if_present=$(printf "%-*s" 53 "${v_network_if_present}")
+
+cat << EOF
+##################################################################
 #-------------------------[ DNS-BINDER ]-------------------------#
 # Domain  : ${v_domain_if_present}#
 # Network : ${v_network_if_present}# 
@@ -1470,9 +1429,10 @@ print_notify "##################################################################
 # 0) Configure local dns server and domain if not yet done       #
 #----------------------------------------------------------------#
 # q) Quit without any changes                                    #
-#----------------------------------------------------------------#"
+#----------------------------------------------------------------#
+EOF
 
-read -p "# Please select one of the options above : " var_function
+read -p "# Please Select an Option from Above : " var_function
 
 case ${var_function} in
 	0) 	
@@ -1524,7 +1484,7 @@ case ${var_function} in
 		exit
 		;;
 	*)
-		print_error "\nInvalid Option! Try Again! \n"
+		echo -e "\nInvalid Option! Try Again! \n"
 		fn_main_menu
 		exit 1
 		;;
@@ -1533,9 +1493,7 @@ esac
 
 
 fn_usage_message() {
-print_notify "Domain  : ${v_domain_if_present}
-Network : ${v_network_if_present} 
-
+cat << EOF
 Usage: dnsbinder [ option ] [ DNS host record ]
 Use one of the following Options :
 	-c      To create a DNS host record
@@ -1548,7 +1506,8 @@ Use one of the following Options :
 	-dc     To delete a CNAME/Alias record for an existing host record
 	--setup	To configure local dns server and domain if not done already
 [ Or ]
-Run dnsbinder utility without any arguements to get menu driven actions."
+Run dnsbinder utility without any arguements to get menu driven actions.
+EOF
 }
 
 if [ ! -z "${1}" ]
@@ -1558,7 +1517,7 @@ then
 		-c)
 			fn_check_existence_of_domain
 			if [[ ! -z "${3}" ]];then
-				print_error "\nInvalid Option! '-c' option takes only 1 arguement as hostname ! \n"
+				echo "Invalid Option! '-c' option takes only 1 arguement as hostname !"
 				fn_usage_message
 				exit 1
 			fi
@@ -1568,7 +1527,7 @@ then
 		-d)
 			fn_check_existence_of_domain
 			if [[ ! -z "${3}" ]];then
-				print_error "\n Invalid Option! '-d' option takes only 1 arguement as hostname ! \n"
+				echo "Invalid Option! '-d' option takes only 1 arguement as hostname !"
 				fn_usage_message
 				exit 1
 			fi
@@ -1578,7 +1537,7 @@ then
 		-r)
 			fn_check_existence_of_domain
 			if [[ ! -z "${3}" ]];then
-				print_error "\nInvalid Option! '-r' option takes only 1 arguement as hostname ! \n"
+				echo "Invalid Option! '-r' option takes only 1 arguement as hostname !"
 				fn_usage_message
 				exit 1
 			fi
@@ -1588,7 +1547,7 @@ then
 		-cf)
 			fn_check_existence_of_domain
 			if [[ ! -z "${3}" ]];then
-				print_error "\nInvalid Option! '-cf' option takes only 1 arguement as file containing list of hostnames ! \n"
+				echo "Invalid Option! '-cf' option takes only 1 arguement as file containing list of hostnames !"
 				fn_usage_message
 				exit 1
 			fi
@@ -1598,7 +1557,7 @@ then
 		-df)
 			fn_check_existence_of_domain
 			if [[ ! -z "${3}" ]];then
-				print_error "\nInvalid Option! '-df' option takes only 1 arguement as file containing list of hostnames ! \n"
+				echo "Invalid Option! '-df' option takes only 1 arguement as file containing list of hostnames !"
 				fn_usage_message
 				exit 1
 			fi
@@ -1608,7 +1567,7 @@ then
 		-ci)	
 			fn_check_existence_of_domain 
 			if [[ ! -z "${4}" ]];then
-				print_error "\nInvalid Option! '-ci' option takes only 2 arguements [ hostname and required ipv4 address ] ! \n"
+				echo "Invalid Option! '-ci' option takes only 2 arguements [ hostname and required ipv4 address ] !"
 				fn_usage_message
 				exit 1
 			fi
@@ -1619,7 +1578,7 @@ then
 		-cc)	
 			fn_check_existence_of_domain 
 			if [[ ! -z "${4}" ]];then
-				print_error "\nInvalid Option! '-cc' option takes only 2 arguements [ cname and hostname ] ! \n"
+				echo "Invalid Option! '-cc' option takes only 2 arguements [ cname and hostname ] !"
 				fn_usage_message
 				exit 1
 			fi
@@ -1629,7 +1588,7 @@ then
 		-dc)	
 			fn_check_existence_of_domain 
 			if [[ ! -z "${3}" ]];then
-				print_error "\nInvalid Option! '-dc' option takes only 1 arguement as cname ! \n"
+				echo "Invalid Option! '-dc' option takes only 1 arguement as cname !"
 				fn_usage_message
 				exit 1
 			fi
@@ -1643,7 +1602,7 @@ then
 		*)
 			if [[ ! "${1}" =~ ^-h|--help$ ]]
 			then
-				print_error "\nInvalid Option \"${1}\"! \n"
+				echo "Invalid Option \"${1}\"!"
 			fi
 			fn_usage_message
 			exit 1
