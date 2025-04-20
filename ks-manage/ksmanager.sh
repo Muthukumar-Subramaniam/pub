@@ -6,7 +6,7 @@ then
     exit 1
 fi
 
-dnsmanager_script='/scripts_by_muthu/server/named-manage/dnsmanager.sh'
+dnsbinder_script='/scripts_by_muthu/server/named-manage/dnsbinder.sh'
 ksmanager_main_dir='/scripts_by_muthu/server/ks-manage'
 ksmanager_hub_dir='/var/www/server.ms.local/ksmanager-hub'
 ipv4_domain='ms.local'
@@ -47,6 +47,7 @@ do
 		echo "	1. Please use only letters, numbers, and hyphens."
 		echo "	2. Please do not start with a number."
 		echo -e "	3. Please do not append the domain name ${ipv4_domain} \n"
+		exit 1
   	fi
 done
 
@@ -59,8 +60,8 @@ then
 
 		if [[ "${v_confirmation}" == "y" ]]
 		then
-			echo -e "\nExecuting the script ${dnsmanager_script} . . .\n"
-			"${dnsmanager_script}" -c "${kickstart_hostname}"
+			echo -e "\nExecuting the script ${dnsbinder_script} . . .\n"
+			"${dnsbinder_script}" -c "${kickstart_hostname}"
 
 			if host "${kickstart_hostname}" &>/dev/null
 			then
@@ -273,7 +274,8 @@ echo "	TFTP Server  : ${tftp_server_name}.${ipv4_domain}"
 echo "	NTP Pool     : ${ntp_pool_name}.${ipv4_domain}"
 echo "	Web Server   : ${web_server_name}.${ipv4_domain}"
 echo "	Windows Host : ${win_hostname}.${ipv4_domain}"	
-echo "	Kickstarts   : ${host_kickstart_dir}"
+echo "	KS Local     : ${host_kickstart_dir}"
+echo "	KS Web       : https://${host_kickstart_dir#/var/www/}"
 echo "	Selected OS  : ${os_distribution} server edition"
 
 echo -e "\nAll done, You can proceed to pxeboot the host ${kickstart_hostname}\n"
