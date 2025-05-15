@@ -408,6 +408,14 @@ EOF
 		print_success "[ done ]"
 	fi
 
+	print_notify "\nMake named service as a dependency for network-online.target . . . " "nskip"
+
+	if [ ! -f /etc/systemd/system/network-online.target.wants/named.service ]; then
+		ln -s /usr/lib/systemd/system/named.service /etc/systemd/system/network-online.target.wants/named.service 
+	fi
+
+	print_success "[ done ]"
+
 	print_notify "\nCreating the command dnsbinder . . . " "nskip"
 
 	cp -p $(pwd)/$0 /usr/bin/dnsbinder
