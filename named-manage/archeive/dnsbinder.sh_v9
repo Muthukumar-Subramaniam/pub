@@ -440,7 +440,6 @@ fn_instruct_on_valid_host_record() {
 fn_get_host_record() {
 	v_input_host="${1}"
 	v_action_requested="${2}"
-	v_rename_record="${3}"
 
 	fn_get_host_record_from_user() {
 
@@ -462,6 +461,18 @@ fn_get_host_record() {
 				
 			v_input_host_record="${v_input_host_record%.${v_domain_name}.}"  
 			v_input_host_record="${v_input_host_record%.${v_domain_name}}"
+
+			if [[ "${v_action_requested}" != "rename" ]]
+			then
+				v_host_record="${v_input_host_record}"
+			else
+				if [ -z "${v_host_record}" ]
+				then
+					v_host_record="${v_input_host_record}"
+				else
+					v_rename_record="${v_input_host_record}"
+				fi
+			fi
 
 			if [[ "${#v_input_host_record}" -le 63 ]] && [[ "${v_input_host_record}" =~ ^[[:alnum:]]([-[:alnum:]]*[[:alnum:]])$ ]]
 	       		then
@@ -514,18 +525,7 @@ fn_get_host_record() {
 
 		elif [[ "${v_action_requested}" == "rename" ]]
 		then
-			if [[ ! -z ${v_rename_record} ]]
-			then
-				v_rename_record="${v_rename_record%.${v_domain_name}.}"  
-				v_rename_record="${v_rename_record%.${v_domain_name}}"
-
-				if [[ ! ${v_rename_record} =~ ^[[:alnum:]]([-[:alnum:]]*[[:alnum:]])$ ]] || [[ ! "${#v_rename_record}" -le 63 ]]
-				then
-					fn_instruct_on_valid_host_record
-				fi
-			else
-				fn_get_host_record_from_user
-			fi
+			fn_get_host_record_from_user
 
 			if grep "^${v_rename_record} "  "${v_fw_zone}" &>/dev/null
 			then 
@@ -1037,7 +1037,7 @@ fn_rename_host_record() {
 		v_if_autorun_false=false	
 	fi
 
-	fn_get_host_record "${1}" "rename" "${2}"
+	fn_get_host_record "${1}" "rename"
 
 	v_exit_status_fn_get_host_record=${?}
 
@@ -1053,22 +1053,13 @@ fn_rename_host_record() {
 
 	v_host_record_rename=$(printf "%-*s" 63 "${v_rename_record}")
 	v_host_record_rename=$(echo "$v_host_record_rename IN A ${v_current_ip_of_host_record}")
-
-	v_input_rename_confirmation="${3}"
 	
 	while :
 	do
-		if [[ ! ${v_input_rename_confirmation} == "-y" ]]
-		then
-			read -p "Please confirm to rename the record ${v_host_record}.${v_domain_name} to ${v_rename_record}.${v_domain_name} (y/n) : " v_confirmation
-			echo
-		else
-			v_confirmation='y'
-		fi
-
+		read -p "Please confirm to rename the record ${v_host_record}.${v_domain_name} to ${v_rename_record}.${v_domain_name} (y/n) : " v_confirmation
 		if [[ $v_confirmation == "y" ]]
 		then
-			print_notify "Renaming host record ${v_host_record}.${v_domain_name} to ${v_rename_record}.${v_domain_name} . . . " "nskip"
+			print_notify "\nRenaming host record ${v_host_record}.${v_domain_name} to ${v_rename_record}.${v_domain_name} . . . " "nskip"
 
 			sed -i "s/${v_host_record_exist}/${v_host_record_rename}/g" ${v_fw_zone}
 			sed -i "s/${v_host_record}.${v_domain_name}./${v_rename_record}.${v_domain_name}./g" ${v_ptr_zone}
@@ -1568,7 +1559,6 @@ Use one of the following Options :
 	-d      To delete a host record
 	-dy     caution ! To do the above without any confirmation
 	-r      To rename an existing host record
-	-ry     caution ! To do the above without any confirmation
 	-cf     To create multiple host records provided in a file 
 	-df     To delete multiple host records provided in a file
 	-ci     To create a host record with specific IPv4 Address
@@ -1610,18 +1600,14 @@ then
 			fi
 			exit
 			;;
-		-r|-ry)
+		-r)
 			fn_check_existence_of_domain
-			if [[ ! -z "${4}" ]];then
-				print_error "\nInvalid Option! ${1} option takes only 2 arguements [ existing host record and new host record ] ! \n"
+			if [[ ! -z "${3}" ]];then
+				print_error "\nInvalid Option! '-r' option takes only 1 arguement as hostname ! \n"
 				fn_usage_message
 				exit 1
 			fi
-			if [[ "${1}" == "-r" ]];then
-				fn_rename_host_record "${2}" "${3}"
-			elif [[ "${1}" == "-ry" ]];then
-				fn_rename_host_record "${2}" "${3}" "-y"
-			fi
+			fn_rename_host_record "${2}"
 			exit
 			;;
 		-cf)

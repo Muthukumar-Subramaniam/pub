@@ -440,7 +440,6 @@ fn_instruct_on_valid_host_record() {
 fn_get_host_record() {
 	v_input_host="${1}"
 	v_action_requested="${2}"
-	v_rename_record="${3}"
 
 	fn_get_host_record_from_user() {
 
@@ -462,6 +461,18 @@ fn_get_host_record() {
 				
 			v_input_host_record="${v_input_host_record%.${v_domain_name}.}"  
 			v_input_host_record="${v_input_host_record%.${v_domain_name}}"
+
+			if [[ "${v_action_requested}" != "rename" ]]
+			then
+				v_host_record="${v_input_host_record}"
+			else
+				if [ -z "${v_host_record}" ]
+				then
+					v_host_record="${v_input_host_record}"
+				else
+					v_rename_record="${v_input_host_record}"
+				fi
+			fi
 
 			if [[ "${#v_input_host_record}" -le 63 ]] && [[ "${v_input_host_record}" =~ ^[[:alnum:]]([-[:alnum:]]*[[:alnum:]])$ ]]
 	       		then
@@ -514,18 +525,7 @@ fn_get_host_record() {
 
 		elif [[ "${v_action_requested}" == "rename" ]]
 		then
-			if [[ ! -z ${v_rename_record} ]]
-			then
-				v_rename_record="${v_rename_record%.${v_domain_name}.}"  
-				v_rename_record="${v_rename_record%.${v_domain_name}}"
-
-				if [[ ! ${v_rename_record} =~ ^[[:alnum:]]([-[:alnum:]]*[[:alnum:]])$ ]] || [[ ! "${#v_rename_record}" -le 63 ]]
-				then
-					fn_instruct_on_valid_host_record
-				fi
-			else
-				fn_get_host_record_from_user
-			fi
+			fn_get_host_record_from_user
 
 			if grep "^${v_rename_record} "  "${v_fw_zone}" &>/dev/null
 			then 
@@ -992,14 +992,13 @@ fn_delete_host_record() {
 		if [[ ! ${v_input_delete_confirmation} == "-y" ]]
 		then
 			read -p "Please confirm deletion of records (y/n) : " v_confirmation
-			echo
 		else
 			v_confirmation='y'
 		fi
 
 		if [[ ${v_confirmation} == "y" ]]
 		then
-			${v_if_autorun_false} && print_notify "Deleting host record ${v_host_record}.${v_domain_name} . . . " "nskip"
+			${v_if_autorun_false} && print_notify "\nDeleting host record ${v_host_record}.${v_domain_name} . . . " "nskip"
 
 			sed -i "/^${v_capture_ptr_prefix} /d" "${v_ptr_zone}"
 			sed -i "/^${v_capture_host_record}/d" "${v_fw_zone}"
@@ -1037,7 +1036,7 @@ fn_rename_host_record() {
 		v_if_autorun_false=false	
 	fi
 
-	fn_get_host_record "${1}" "rename" "${2}"
+	fn_get_host_record "${1}" "rename"
 
 	v_exit_status_fn_get_host_record=${?}
 
@@ -1053,22 +1052,13 @@ fn_rename_host_record() {
 
 	v_host_record_rename=$(printf "%-*s" 63 "${v_rename_record}")
 	v_host_record_rename=$(echo "$v_host_record_rename IN A ${v_current_ip_of_host_record}")
-
-	v_input_rename_confirmation="${3}"
 	
 	while :
 	do
-		if [[ ! ${v_input_rename_confirmation} == "-y" ]]
-		then
-			read -p "Please confirm to rename the record ${v_host_record}.${v_domain_name} to ${v_rename_record}.${v_domain_name} (y/n) : " v_confirmation
-			echo
-		else
-			v_confirmation='y'
-		fi
-
+		read -p "Please confirm to rename the record ${v_host_record}.${v_domain_name} to ${v_rename_record}.${v_domain_name} (y/n) : " v_confirmation
 		if [[ $v_confirmation == "y" ]]
 		then
-			print_notify "Renaming host record ${v_host_record}.${v_domain_name} to ${v_rename_record}.${v_domain_name} . . . " "nskip"
+			print_notify "\nRenaming host record ${v_host_record}.${v_domain_name} to ${v_rename_record}.${v_domain_name} . . . " "nskip"
 
 			sed -i "s/${v_host_record_exist}/${v_host_record_rename}/g" ${v_fw_zone}
 			sed -i "s/${v_host_record}.${v_domain_name}./${v_rename_record}.${v_domain_name}./g" ${v_ptr_zone}
@@ -1427,21 +1417,13 @@ fn_create_cname_record() {
 
 fn_delete_cname_record() {
 	v_input_cname="${1}"
-	v_input_delete_confirmation="${2}"
 
 	fn_get_cname_record "delete"
 
 	while :
 	do
-		print_warning "\nCNAME Record to be deleted : $(grep 'alias' <<< $(host ${v_input_cname}.${v_domain_name})) \n"
-		if [[ ! ${v_input_delete_confirmation} == "-y" ]]
-		then
-			read -p "Please confirm deletion of cname record \"${v_input_cname}.${v_domain_name}\" (y/n) : " v_confirmation
-			echo
-		else
-			v_confirmation='y'
-		fi
-
+		print_warning "\nCNAME Record to be deleted : $(grep 'alias' <<< $(host ${v_input_cname}.${v_domain_name})) \n\n"
+		read -p "Please confirm deletion of cname record \"${v_input_cname}.${v_domain_name}\" (y/n) : " v_confirmation
 		case "${v_confirmation}" in
 			y|Y|"yes")
 				break
@@ -1461,7 +1443,7 @@ fn_delete_cname_record() {
 		esac
 	done
 
-	print_notify "Deleting CNAME record \"${v_input_cname}.${v_domain_name}\" . . . "  "nskip"
+	print_notify "\nDeleting CNAME record \"${v_input_cname}.${v_domain_name}\" . . . "  "nskip"
 
 	sed -i "/^${v_input_cname} / {/IN CNAME/d}" "${v_fw_zone}" 
 
@@ -1562,22 +1544,17 @@ fn_usage_message() {
 print_notify "Domain  : ${v_domain_if_present}
 Network : ${v_network_if_present} 
 
-Usage: dnsbinder [ option ] [ dns record ]
+Usage: dnsbinder [ option ] [ DNS host record ]
 Use one of the following Options :
-	-c      To create a host record
-	-d      To delete a host record
-	-dy     caution ! To do the above without any confirmation
-	-r      To rename an existing host record
-	-ry     caution ! To do the above without any confirmation
-	-cf     To create multiple host records provided in a file 
-	-df     To delete multiple host records provided in a file
-	-ci     To create a host record with specific IPv4 Address
+	-c      To create a DNS host record
+	-d      To delete a DNS host record
+	-r      To rename an existing DNS host record
+	-cf     To create multiple DNS host records provided in a file 
+	-df     To delete multiple DNS host records provided in a file
+	-ci     To create a DNS host record with specific IPv4 Address
 	-cc     To create a CNAME/Alias record for an existing host record
 	-dc     To delete a CNAME/Alias record for an existing host record
-	-dcy    caution ! To do the above without any confirmation
 	--setup	To configure local dns server and domain if not done already
-	-h (or) --help To print this usage info	
-
 [ Or ]
 Run dnsbinder utility without any arguements to get menu driven actions."
 }
@@ -1596,32 +1573,24 @@ then
 			fn_create_host_record "${2}"
 			exit
 			;;
-		-d|-dy)
+		-d)
 			fn_check_existence_of_domain
 			if [[ ! -z "${3}" ]];then
-				print_error "\n Invalid Option! ${1} option takes only 1 arguement as hostname ! \n"
+				print_error "\n Invalid Option! '-d' option takes only 1 arguement as hostname ! \n"
 				fn_usage_message
 				exit 1
 			fi
-			if [[ "${1}" == "-d" ]];then
-				fn_delete_host_record "${2}"
-			elif [[ "${1}" == "-dy" ]];then
-				fn_delete_host_record "${2}" "-y"
-			fi
+			fn_delete_host_record "${2}"
 			exit
 			;;
-		-r|-ry)
+		-r)
 			fn_check_existence_of_domain
-			if [[ ! -z "${4}" ]];then
-				print_error "\nInvalid Option! ${1} option takes only 2 arguements [ existing host record and new host record ] ! \n"
+			if [[ ! -z "${3}" ]];then
+				print_error "\nInvalid Option! '-r' option takes only 1 arguement as hostname ! \n"
 				fn_usage_message
 				exit 1
 			fi
-			if [[ "${1}" == "-r" ]];then
-				fn_rename_host_record "${2}" "${3}"
-			elif [[ "${1}" == "-ry" ]];then
-				fn_rename_host_record "${2}" "${3}" "-y"
-			fi
+			fn_rename_host_record "${2}"
 			exit
 			;;
 		-cf)
@@ -1665,18 +1634,14 @@ then
 			fn_create_cname_record "${2}" "${3}"
 			exit
 			;;
-		-dc|-dcy)	
+		-dc)	
 			fn_check_existence_of_domain 
 			if [[ ! -z "${3}" ]];then
-				print_error "\nInvalid Option! ${1} option takes only 1 arguement as cname ! \n"
+				print_error "\nInvalid Option! '-dc' option takes only 1 arguement as cname ! \n"
 				fn_usage_message
 				exit 1
 			fi
-			if [[ "${1}" == "-dc" ]];then
-				fn_delete_cname_record "${2}"
-			elif [[ "${1}" == "-dcy" ]];then
-				fn_delete_cname_record "${2}" "-y"
-			fi
+			fn_delete_cname_record "${2}"
 			exit
 			;;
 		--setup)
